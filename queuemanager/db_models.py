@@ -37,6 +37,7 @@ ma = Marshmallow()
 def init_db_command():
     """Creates new tables."""
     with current_app.app_context():
+        db.drop_all()
         db.create_all()
     click.echo('Database created successfully.')
 
