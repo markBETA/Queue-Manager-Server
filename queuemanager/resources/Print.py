@@ -27,11 +27,11 @@ class PrintList(Resource):
         Returns all prints in the database
         """
         try:
-            print_ = db.get_prints()
+            prints = db.get_prints()
         except DBInternalError:
             return {'message': 'Unable to read the data from the database'}, 500
 
-        return prints_schema.dump(print_).data, 200
+        return prints_schema.dump(prints).data, 200
 
     def post(self):
         """
