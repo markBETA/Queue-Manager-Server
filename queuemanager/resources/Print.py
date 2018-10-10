@@ -15,7 +15,7 @@ from queuemanager.db_models import PrintSchema
 db = DBManager(autocommit=False)
 
 print_schema = PrintSchema()
-users_schema = PrintSchema(many=True)
+prints_schema = PrintSchema(many=True)
 
 class PrintList(Resource):
     """
@@ -27,11 +27,11 @@ class PrintList(Resource):
         Returns all prints in the database
         """
         try:
-            user = db.get_prints()
+            print_ = db.get_prints()
         except DBInternalError:
             return {'message': 'Unable to read the data from the database'}, 500
 
-        return users_schema.dump(user).data, 200
+        return prints_schema.dump(print_).data, 200
 
     def post(self):
         """
