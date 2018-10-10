@@ -16,10 +16,12 @@ setup(
         'flask-sqlalchemy',
         'flask-restful',
         'flask-marshmallow',
+        'flask-socketio',
         'sqlalchemy',
         'marshmallow-sqlalchemy',
         'click',
-        'werkzeug'
+        'werkzeug',
+        "eventlet"
     ],
     extras_require={
         'test': [
