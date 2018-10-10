@@ -10,25 +10,24 @@ from flask_restful import Resource
 from flask import request
 from werkzeug.exceptions import BadRequest
 from queuemanager.db_manager import DBManagerError, DBInternalError, DBManager
-from queuemanager.db_models import UserSchema
+from queuemanager.db_models import PrintSchema
 
 db = DBManager(autocommit=False)
 
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
+print_schema = PrintSchema()
+users_schema = PrintSchema(many=True)
 
-
-class UserList(Resource):
+class PrintList(Resource):
     """
-    /users
+    /prints
     """
 
     def get(self):
         """
-        Returns all users int the database
+        Returns all prints in the database
         """
         try:
-            user = db.get_users()
+            user = db.get_prints()
         except DBInternalError:
             return {'message': 'Unable to read the data from the database'}, 500
 
@@ -36,7 +35,7 @@ class UserList(Resource):
 
     def post(self):
         """
-        Register a new user in the database
+        Register a new print in the database
         """
         try:
             json_data = request.get_json(force=True)
@@ -46,52 +45,51 @@ class UserList(Resource):
             return {'message': 'No input data provided'}, 400
 
         # Check that the retrieved data has all parameters
-        if not {"username", "password", "is_admin"}.issubset(json_data.keys()):
+        if not {"name"}.issubset(json_data.keys()):
             return {'message': 'Missing JSON keys'}, 400
 
         # Iterate over data received keys for checking that there are correct
         for key in json_data:
-            if type(json_data[key]) != str:
+            if key != "name" and type(json_data[key]) != str:
                 return {'message': "Invalid parameter '" + key + "'"}, 400
-            if key == "is_admin":
-                if json_data[key].lower() == "false":
-                    json_data[key] = False
-                elif json_data[key].lower() == "true":
-                    json_data[key] = True
-                else:
-                    return {'message': "Invalid parameter '" + key + "'"}, 400
-
-        # Check that there isn't any user with that username
-        try:
-            user = db.get_user(username=json_data["username"])
-        except DBInternalError:
-            return {'message': 'Unable to read the data from the database'}, 500
-        if user is not None:
-            return user_schema.dump(user).data, 409
 
         try:
-            user = db.insert_user(username=json_data["username"], password=json_data["password"], is_admin=json_data["is_admin"])
+            print_ = db.insert_print(json_data["name"])
             db.commit_changes()
         except DBInternalError:
             return {'message': 'Unable to write the new entry to the database'}, 500
         except DBManagerError as e:
             return {'message': str(e)}, 400
 
-        return user_schema.dump(user).data, 201
+        return print_schema.dump(print_).data, 201
 
 
-class User(Resource):
+class Print(Resource):
     """
-    /users/<user_id>
+    /prints/<print_id>
     """
 
-    def get(self, user_id):
+    def get(self, print_id):
         """
-        Returns the user with id==user_id
+        Returns the print with id==print_id
         """
         try:
-            user = db.get_user(user_id=user_id)
+            print_ = db.get_print(print_id)
         except DBInternalError:
             return {'message': 'Unable to read the data from the database'}, 500
 
-        return user_schema.dump(user).data, 200
+        return print_schema.dump(print_).data, 200
+
+    def delete(self, print_id):
+        """
+        Deletes the print with id==print_id
+        """
+        try:
+            print_ = db.delete_print(print_id)
+            db.commit_changes()
+        except DBInternalError:
+            return {'message': 'Unable to delete from the database'}, 500
+        except DBManagerError as e:
+            return {'message': str(e)}, 400
+
+        return print_schema.dump(print_).data, 202

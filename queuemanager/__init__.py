@@ -13,6 +13,11 @@ __status__ = "Development"
 
 import os
 from flask import Flask
+from flask_socketio import SocketIO
+
+socketio = SocketIO()
+
+from . import events
 
 
 def create_app(test_config=None):
@@ -36,9 +41,12 @@ def create_app(test_config=None):
     from . import db_models
     db_models.init_app(app)
 
+    socketio.init_app(app)
+
     # apply the blueprints to the app
     with app.app_context():
         from queuemanager.api_resources import api_bp
         app.register_blueprint(api_bp)
 
     return app
+

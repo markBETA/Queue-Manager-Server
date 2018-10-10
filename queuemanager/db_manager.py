@@ -11,13 +11,11 @@ __maintainer__ = "Eloi Pardo"
 __email__ = "epardo@fundaciocim.org"
 __status__ = "Development"
 
-from datetime import datetime, timedelta
-from binascii import hexlify
+
 from flask import current_app
 from sqlalchemy import exc
-from sqlalchemy.orm import aliased
-from queuemanager.db_models import db, User, Print
-import os
+from sqlalchemy.orm import exc as ormexc
+from queuemanager.db_models import db, Print
 
 
 ######################################
@@ -73,49 +71,56 @@ class DBManager(object):
             current_app.logger.error("Can't update the database. Details: %s", str(e))
             raise DBInternalError("Can't update the database")
 
-    def insert_user(self, username: str, password: str, is_admin: bool):
-        if username == "":
-            raise InvalidParameter("The 'username' parameter can't be an empty string")
-        if password == "":
-            raise InvalidParameter("The 'password' parameter can't be an empty string")
+    def insert_print(self, name: str):
+        if name == "":
+            raise InvalidParameter("The 'name' parameter can't be an empty string")
 
-        user = User(username=username, password=password, is_admin=is_admin)
+        print_ = Print(name)
 
-        # Add the user row
-        db.session.add(user)
+        # Add the print row
+        db.session.add(print_)
 
         # Commit changes to the database
         if self.autocommit:
             self.commit_changes()
 
-        return user
+        return print_
 
-    def get_user(self, user_id=None, username=None):
-        # Get the user
-        if user_id is not None:
+    def get_print(self, print_id):
+        # Get the print
+        if print_id is not None:
             try:
-                user = User.query.get(user_id)
+                _print = Print.query.get(print_id)
             except exc.SQLAlchemyError as e:
-                current_app.logger.error("Can't retrive user with id '%s'. Details: %s", user_id, str(e))
-                raise DBInternalError("Can't retrieve user with id '{}'".format(user_id))
-
-        elif username is not None:
-            try:
-                user = User.query.filter_by(username=username).first()
-            except exc.SQLAlchemyError as e:
-                current_app.logger.error("Can't retrive user with username '%s'. Details: %s", username, str(e))
-                raise DBInternalError("Can't retrieve user with username '{}'".format(username))
-
+                current_app.logger.error("Can't retrieve print with id '%s'. Details: %s", print_id, str(e))
+                raise DBInternalError("Can't retrieve print with id '{}'".format(print_id))
         else:
-            raise InvalidParameter("Id and username can't be both None")
+            raise InvalidParameter("Print_id can't be None")
 
-        return user
+        return _print
 
-    def get_users(self):
+    def get_prints(self):
         try:
-            users = User.query.all()
+            prints = Print.query.all()
         except exc.SQLAlchemyError as e:
-            current_app.logger.error("Can't retrive users Details: %s", str(e))
-            raise DBInternalError("Can't retrieve users")
+            current_app.logger.error("Can't retrieve prints Details: %s", str(e))
+            raise DBInternalError("Can't retrieve prints")
 
-        return users
+        return prints
+
+    def delete_print(self, print_id):
+        try:
+            print_ = Print.query.get(print_id)
+            db.session.delete(print_)
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't delete the print with id '%s' Details: %s", print_id, str(e))
+            raise DBInternalError("Can't delete the print with id '{}'".format(print_id))
+        except ormexc.UnmappedInstanceError as e:
+            current_app.logger.error("Can't delete the print with id '%s' Details: %s", print_id, str(e))
+            raise DBInternalError("Can't delete the print with id '{}'".format(print_id))
+
+        # Commit changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
+        return print_

@@ -52,30 +52,6 @@ def init_app(app):
 # DATABASE MODELS DECLARATION #
 ###############################
 
-class User(db.Model):
-    """
-    Definition of the table Users that contains all the registered users in the platform
-    """
-    __tablename__ = "Users"
-
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(80), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)
-    registered_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
-
-    def __init__(self, username, password, is_admin):
-        self.username = username
-        self.password = password
-        self.is_admin = is_admin
-
-class UserSchema(ma.Schema):
-    id = fields.Integer()
-    username = fields.String()
-    is_admin = fields.Boolean()
-    registered_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
-
-
 class Print(db.Model):
     """
     Definition of the table Prints that contains all prints
@@ -85,4 +61,11 @@ class Print(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     name = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
-    user_id = db.Column(db.String(256), db.ForeignKey("Users.id"), nullable=False)
+
+    def __init__(self, name):
+        self.name = name
+
+class PrintSchema(ma.Schema):
+    id = fields.Integer()
+    name = fields.String()
+    created_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
