@@ -71,11 +71,11 @@ class DBManager(object):
             current_app.logger.error("Can't update the database. Details: %s", str(e))
             raise DBInternalError("Can't update the database")
 
-    def insert_print(self, name: str):
-        if name == "":
-            raise InvalidParameter("The 'name' parameter can't be an empty string")
+    def insert_print(self, name: str, filepath):
+        if name == "" or filepath == "":
+            raise InvalidParameter("The 'name' and the 'filepath' parameter can't be an empty string")
 
-        print_ = Print(name)
+        print_ = Print(name, filepath)
 
         # Add the print row
         db.session.add(print_)

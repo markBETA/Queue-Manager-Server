@@ -6,8 +6,10 @@ __maintainer__ = "Eloi Pardo"
 __email__ = "epardo@fundaciocim.org"
 __status__ = "Development"
 
+import os
+
 from flask_restful import Resource
-from flask import request
+from flask import request, json, current_app
 from werkzeug.exceptions import BadRequest
 from queuemanager.db_manager import DBManagerError, DBInternalError, DBManager
 from queuemanager.db_models import PrintSchema
@@ -40,7 +42,7 @@ class PrintList(Resource):
         try:
             json_data = request.get_json(force=True)
         except BadRequest:
-            return {'message': 'Incorrect JSON format'}, 400
+            json_data = json.loads(json.dumps(request.form))
         if not json_data:
             return {'message': 'No input data provided'}, 400
 
@@ -53,13 +55,22 @@ class PrintList(Resource):
             if key != "name" and type(json_data[key]) != str:
                 return {'message': "Invalid parameter '" + key + "'"}, 400
 
+        gcode = request.files.get('gcode')
+        gcode_name = gcode.filename
+        if gcode_name.rsplit('.', 1)[1].lower() != 'gcode':
+            return {'message': 'The file format must be "gcode"'}, 400
+
+        filepath = os.path.join(current_app.config.get('GCODE_STORAGE_PATH'), gcode_name)
+
         try:
-            print_ = db.insert_print(json_data["name"])
+            print_ = db.insert_print(json_data['name'], filepath)
             db.commit_changes()
         except DBInternalError:
             return {'message': 'Unable to write the new entry to the database'}, 500
         except DBManagerError as e:
             return {'message': str(e)}, 400
+
+        gcode.save(filepath + '.' + str(print_.id))
 
         return print_schema.dump(print_).data, 201
 
@@ -91,5 +102,7 @@ class Print(Resource):
             return {'message': 'Unable to delete from the database'}, 500
         except DBManagerError as e:
             return {'message': str(e)}, 400
+
+        os.remove(print_.filepath + '.' + print_id)
 
         return print_schema.dump(print_).data, 202

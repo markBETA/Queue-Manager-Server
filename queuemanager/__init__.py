@@ -32,10 +32,9 @@ def create_app(test_config=None):
         app.config.from_mapping(test_config)
 
     # ensure the instance folder exists
-    try:
-        os.makedirs(app.instance_path)
-    except OSError:
-        pass
+    os.makedirs(app.instance_path, exist_ok=True)
+    # ensure the folder to save the gcodes exists
+    os.makedirs(app.config.get('GCODE_STORAGE_PATH'), exist_ok=True)
 
     # register the database commands
     from . import db_models
