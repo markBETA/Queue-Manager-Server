@@ -15,6 +15,7 @@ setup(
         'Flask>=1.0',
         'flask-sqlalchemy',
         'flask-restful',
+        'marshmallow==2.15.6',
         'flask-marshmallow',
         'flask-socketio',
         'sqlalchemy',
@@ -22,13 +23,7 @@ setup(
         'click',
         'werkzeug',
         "eventlet"
-    ],
-    extras_require={
-        'test': [
-            'pytest',
-            'coverage',
-        ],
-    },
+    ]
 )
 
 
