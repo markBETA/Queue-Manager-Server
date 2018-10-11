@@ -1,5 +1,25 @@
 #!/usr/bin/env bash
 
+function display_usage() {
+    echo "usage: $0 [pathtoproject]"
+    echo "  -h --help      display help"
+}
+
+if ! [[ $# -eq 1 ]]
+then
+    display_usage
+    exit 1
+fi
+
+if [[ ( $1 == "--help") ||  $1 == "-h" ]]
+then
+    display_usage
+    exit 0
+fi
+
+#go to the project folder
+cd $1
+
 db_file="./instance/queuemanager.sqlite" #Database file relative path
 
 ## This script can be used to start the flask server automatically in development mode
