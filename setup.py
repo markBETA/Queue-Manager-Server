@@ -18,11 +18,13 @@ setup(
         'marshmallow==2.15.6',
         'flask-marshmallow',
         'flask-socketio',
+        'flask-cors',
         'sqlalchemy',
         'marshmallow-sqlalchemy',
         'click',
         'werkzeug',
-        "eventlet"
+        'eventlet',
+        'requests'
     ]
 )
 

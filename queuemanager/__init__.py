@@ -14,8 +14,9 @@ __status__ = "Development"
 import os
 from flask import Flask
 from flask_socketio import SocketIO
+from flask_cors import CORS
 
-socketio = SocketIO()
+sio = SocketIO()
 
 from . import events
 
@@ -23,6 +24,7 @@ from . import events
 def create_app(test_config=None):
     """Create and configure an instance of the Flask application."""
     app = Flask(__name__, instance_relative_config=True)
+    CORS(app)
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
@@ -40,7 +42,7 @@ def create_app(test_config=None):
     from . import db_models
     db_models.init_app(app)
 
-    socketio.init_app(app)
+    sio.init_app(app)
 
     # apply the blueprints to the app
     with app.app_context():

@@ -1,18 +1,19 @@
-from flask import current_app
+from socketio import Namespace
+from flask import current_app, request
 
-from . import socketio
-
-
-@socketio.on('message')
-def handle_message(message):
-    current_app.logger.info('received message: ' + message)
+from . import sio
 
 
-@socketio.on('connect')
+@sio.on("connect")
 def connect():
-    current_app.logger.info('client connected')
+    current_app.logger.info("client %s connected", request.sid)
 
 
-@socketio.on('disconnect')
+@sio.on("disconnect")
 def disconnect():
-    current_app.logger.info('client disconnected')
+    current_app.logger.info("client %s disconnected", request.sid)
+
+
+@sio.on("printer_state_changed")
+def printer_state_changed(payload):
+    current_app.logger.info("printer_state_changed", payload)
