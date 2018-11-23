@@ -7,6 +7,7 @@ __email__ = "epardo@fundaciocim.org"
 __status__ = "Development"
 
 import os
+import requests
 
 from flask_restful import Resource
 from flask import request, json, current_app
@@ -18,6 +19,7 @@ db = DBManager(autocommit=False)
 
 print_schema = PrintSchema()
 prints_schema = PrintSchema(many=True)
+
 
 class PrintList(Resource):
     """
@@ -71,6 +73,13 @@ class PrintList(Resource):
             return {'message': str(e)}, 400
 
         gcode.save(filepath + '.' + str(print_.id))
+        # try:
+        #     headers = {'X-Api-Key': 'AAFBCFB524CB4A289B036A434903E47A'}
+        #     files = {'file': (gcode_name, gcode, 'application/octet-stream'), 'print': True}
+        #     r = requests.post('http://localhost:5000/api/files/sdcard', headers=headers, files=files)
+        #     print(r.text)
+        # except Exception as e:
+        #     return {'message': str(e)}, 400
 
         return print_schema.dump(print_).data, 201
 

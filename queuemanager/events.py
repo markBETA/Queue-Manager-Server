@@ -16,4 +16,5 @@ def disconnect():
 
 @sio.on("printer_state_changed")
 def printer_state_changed(payload):
-    current_app.logger.info("printer_state_changed", payload)
+    current_app.logger.info("printer_state_changed: %s" % payload["state_string"])
+    sio.emit("printer_state", payload["state_string"], broadcast=True, include_self=False)
