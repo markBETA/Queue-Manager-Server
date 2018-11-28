@@ -13,10 +13,10 @@ __status__ = "Development"
 
 import os
 from flask import Flask
-from flask_socketio import SocketIO
 from flask_cors import CORS
+from .socket.SocketManager import SocketManager
 
-sio = SocketIO()
+sio = SocketManager.get_instance().sio
 
 from . import events
 

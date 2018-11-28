@@ -67,6 +67,7 @@ class Print(db.Model):
         self.name = name
         self.filepath = filepath
 
+
 class PrintSchema(ma.Schema):
     id = fields.Integer()
     name = fields.String()
