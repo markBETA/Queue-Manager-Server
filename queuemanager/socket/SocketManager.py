@@ -16,22 +16,37 @@ class SocketManager:
 
         SocketManager._instance = self
 
+        self._printer_state = "Unknown"
+
         self.sio = SocketIO()
-        from .QueueManagerNamespace import QueueManagerNamespace
-        self.sio.on_namespace(QueueManagerNamespace())
+        from .ClientNamespace import ClientNamespace
+        from .OctopiNamespace import OctopiNamespace
+        self.sio.on_namespace(ClientNamespace("/client"))
+        self.sio.on_namespace(OctopiNamespace("/octopi"))
 
         self._db = DBManager(autocommit=False)
 
     def init_app(self, app):
         self.sio.init_app(app)
 
-    def send_prints(self):
+    @property
+    def printer_state(self):
+        return self._printer_state
+
+    @printer_state.setter
+    def printer_state(self, printer_state):
+        self._printer_state = printer_state
+
+    def send_prints(self, **kwargs):
         try:
             prints = self._db.get_prints()
         except DBInternalError:
             return
 
-        self.sio.emit("queues", prints_schema.jsonify(prints).json, broadcast=True)
+        self.sio.emit("queues", prints_schema.jsonify(prints).json, namespace="/client", **kwargs)
+
+    def send_printer_state(self, **kwargs):
+        self.sio.emit("printer_state", self.printer_state, namespace="/client", **kwargs)
 
     @classmethod
     def get_instance(cls) -> "SocketManager":

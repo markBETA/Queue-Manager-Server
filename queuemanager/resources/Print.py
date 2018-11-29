@@ -83,7 +83,7 @@ class PrintList(Resource):
         # except Exception as e:
         #     return {'message': str(e)}, 400
 
-        socket_manager.send_prints()
+        socket_manager.send_prints(**{"broadcast": True})
 
         return print_schema.dump(print_).data, 201
 
@@ -118,6 +118,6 @@ class Print(Resource):
 
         os.remove(print_.filepath + '.' + print_id)
 
-        socket_manager.send_prints()
+        socket_manager.send_prints(**{"broadcast": True})
 
         return print_schema.dump(print_).data, 202
