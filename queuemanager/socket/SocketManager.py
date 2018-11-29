@@ -17,7 +17,13 @@ class SocketManager:
         SocketManager._instance = self
 
         self.sio = SocketIO()
+        from .QueueManagerNamespace import QueueManagerNamespace
+        self.sio.on_namespace(QueueManagerNamespace())
+
         self._db = DBManager(autocommit=False)
+
+    def init_app(self, app):
+        self.sio.init_app(app)
 
     def send_prints(self):
         try:
@@ -36,5 +42,3 @@ class SocketManager:
         return SocketManager._instance
 
     _instance = None
-
-

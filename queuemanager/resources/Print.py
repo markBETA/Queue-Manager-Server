@@ -14,8 +14,10 @@ from flask import request, json, current_app
 from werkzeug.exceptions import BadRequest
 from queuemanager.db_manager import DBManagerError, DBInternalError, DBManager
 from queuemanager.db_models import PrintSchema
+from queuemanager.socket.SocketManager import SocketManager
 
 db = DBManager(autocommit=False)
+socket_manager = SocketManager.get_instance()
 
 print_schema = PrintSchema()
 prints_schema = PrintSchema(many=True)
@@ -81,6 +83,8 @@ class PrintList(Resource):
         # except Exception as e:
         #     return {'message': str(e)}, 400
 
+        socket_manager.send_prints()
+
         return print_schema.dump(print_).data, 201
 
 
@@ -113,5 +117,7 @@ class Print(Resource):
             return {'message': str(e)}, 400
 
         os.remove(print_.filepath + '.' + print_id)
+
+        socket_manager.send_prints()
 
         return print_schema.dump(print_).data, 202

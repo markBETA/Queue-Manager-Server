@@ -12,13 +12,11 @@ __email__ = "epardo@fundaciocim.org"
 __status__ = "Development"
 
 import os
+
 from flask import Flask
 from flask_cors import CORS
+
 from .socket.SocketManager import SocketManager
-
-sio = SocketManager.get_instance().sio
-
-from . import events
 
 
 def create_app(test_config=None):
@@ -42,7 +40,7 @@ def create_app(test_config=None):
     from . import db_models
     db_models.init_app(app)
 
-    sio.init_app(app)
+    SocketManager.get_instance().init_app(app)
 
     # apply the blueprints to the app
     with app.app_context():
