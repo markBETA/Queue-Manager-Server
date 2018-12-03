@@ -36,19 +36,18 @@ class InvalidParameter(DBManagerError):
     pass
 
 
-class InvalidFilterType(DBManagerError):
-    """
-    This exception represents an invalid filter type input in the get method applied to the finished prints.
-    """
-    pass
-
-
 class DBInternalError(DBManagerError):
     """
     This exception will be raised when we are unable to write or read from the database
     """
     pass
 
+
+class UniqueConstraintError(DBManagerError):
+    """
+    This exception will be raise when the UNIQUE constraint fails
+    """
+    pass
 
 ######################################
 # DATABASE MANAGER OBJECT DEFINITION #
@@ -66,6 +65,10 @@ class DBManager(object):
         # Update the database with error catching
         try:
             db.session.commit()
+        except exc.IntegrityError as e:
+            db.session.rollback()
+            current_app.logger.error(str(e))
+            raise UniqueConstraintError(str(e))
         except exc.SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.error("Can't update the database. Details: %s", str(e))

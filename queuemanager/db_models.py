@@ -59,7 +59,7 @@ class Print(db.Model):
     __tablename__ = "Prints"
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
-    name = db.Column(db.String(256), nullable=False)
+    name = db.Column(db.String(256), unique=True, nullable=False)
     filepath = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
 
