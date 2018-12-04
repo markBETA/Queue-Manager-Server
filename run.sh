@@ -21,6 +21,8 @@ fi
 cd $1
 
 db_file="./instance/queuemanager.sqlite" #Database file relative path
+host="0.0.0.0"
+port="8080"
 
 ## This script can be used to start the flask server automatically in development mode
 
@@ -36,4 +38,4 @@ then
     flask init-db
 fi
 # Run Flask application
-flask run --host=0.0.0.0
+flask run --host=${host} --port=${port}
