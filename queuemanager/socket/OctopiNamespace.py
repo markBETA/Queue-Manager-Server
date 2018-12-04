@@ -16,10 +16,10 @@ class OctopiNamespace(Namespace):
     def on_disconnect(self):
         current_app.logger.info("client %s disconnected", request.sid)
 
-    def on_printer_state_changed(self, event, payload):
-        current_app.logger.info("printer_state_changed: %s" % payload["state_string"])
+    def on_printer_state_changed(self, state):
+        current_app.logger.info("printer_state_changed: %s" % state)
         kwargs = {
             "broadcast": True
         }
-        self._socket_manager.printer_state = payload["state_string"]
+        self._socket_manager.printer_state = state
         self._socket_manager.send_printer_state(**kwargs)

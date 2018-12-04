@@ -29,14 +29,6 @@ class SocketManager:
     def init_app(self, app):
         self.sio.init_app(app)
 
-    @property
-    def printer_state(self):
-        return self._printer_state
-
-    @printer_state.setter
-    def printer_state(self, printer_state):
-        self._printer_state = printer_state
-
     def send_prints(self, **kwargs):
         try:
             prints = self._db.get_prints()
@@ -47,6 +39,14 @@ class SocketManager:
 
     def send_printer_state(self, **kwargs):
         self.sio.emit("printer_state", self.printer_state, namespace="/client", **kwargs)
+
+    @property
+    def printer_state(self):
+        return self._printer_state
+
+    @printer_state.setter
+    def printer_state(self, printer_state):
+        self._printer_state = printer_state
 
     @classmethod
     def get_instance(cls) -> "SocketManager":
