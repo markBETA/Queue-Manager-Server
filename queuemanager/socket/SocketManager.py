@@ -23,7 +23,7 @@ class SocketManager:
         self.sio.on_namespace(ClientNamespace("/client"))
         self.sio.on_namespace(OctopiNamespace("/octopi"))
 
-        self._db = DBManager(autocommit=False)
+        self._db = DBManager()
 
     def init_app(self, app):
         self.sio.init_app(app)

@@ -75,7 +75,7 @@ class DBManager(object):
             current_app.logger.error("Can't update the database. Details: %s", str(e))
             raise DBInternalError("Can't update the database")
 
-    def insert_print(self, name: str, filepath: str, file_id: int):
+    def insert_print(self, name: str, filepath: str):
         if name == "" or filepath == "":
             raise InvalidParameter("The 'name' and the 'filepath' parameter can't be an empty string")
 
@@ -133,6 +133,8 @@ class DBManager(object):
         try:
             print_ = Print.query.get(print_id)
             print_.update(**kwargs)
+            # print_.name = kwargs.get("name")
+            # db.session.flush()
         except exc.SQLAlchemyError as e:
             current_app.logger.error("Can't update the print with id '%s' Details: %s", print_id, str(e))
             raise DBInternalError("Can't update the print with id '{}'".format(print_id))

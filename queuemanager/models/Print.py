@@ -3,8 +3,6 @@ from marshmallow import fields
 from flask_marshmallow import Marshmallow
 from queuemanager.db_models import db
 
-from .File import File
-
 ma = Marshmallow()
 
 
@@ -17,7 +15,7 @@ class Print(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     name = db.Column(db.String(256), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
-    file_id = db.Column(db.Integer, db.ForeignKey("Files.id"), nullable=False)
+    filepath = db.Column(db.String(256), nullable=False)
 
     def __init__(self, name, filepath):
         self.name = name
@@ -32,5 +30,5 @@ class Print(db.Model):
 class PrintSchema(ma.Schema):
     id = fields.Integer()
     name = fields.String()
-    filepath = fields.String()
     created_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
+    filepath = fields.String()
