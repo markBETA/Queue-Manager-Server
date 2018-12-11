@@ -7,15 +7,14 @@ __email__ = "epardo@fundaciocim.org"
 __status__ = "Development"
 
 import os
-import requests
 
 from flask_restful import Resource
 from flask import request, json, current_app
 from werkzeug.exceptions import BadRequest
 from queuemanager.db_manager import DBManagerError, DBInternalError, DBManager, UniqueConstraintError
-from queuemanager.db_models import PrintSchema
+from queuemanager.models.Print import PrintSchema
 from queuemanager.socket.SocketManager import SocketManager
-from sqlalchemy.exc import IntegrityError
+
 
 db = DBManager(autocommit=False)
 socket_manager = SocketManager.get_instance()
@@ -68,7 +67,17 @@ class PrintList(Resource):
         filepath = os.path.join(current_app.config.get('GCODE_STORAGE_PATH'), gcode_name)
 
         try:
-            print_ = db.insert_print(json_data['name'], filepath)
+            file = db.insert_file(gcode_name, filepath)
+            db.commit_changes()
+        except UniqueConstraintError:
+            return {'message': 'File name is not unique'}, 409
+        except DBInternalError:
+            return {'message': 'Unable to write the new entry to the database'}, 500
+        except DBManagerError as e:
+            return {'message': str(e)}, 400
+
+        try:
+            print_ = db.insert_print(json_data['name'], filepath, file.id)
             db.commit_changes()
         except UniqueConstraintError:
             return {'message': 'Print name is not unique'}, 409

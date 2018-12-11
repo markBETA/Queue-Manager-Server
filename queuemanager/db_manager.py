@@ -15,7 +15,8 @@ __status__ = "Development"
 from flask import current_app
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
-from queuemanager.db_models import db, Print
+from queuemanager.db_models import db
+from queuemanager.models.Print import Print
 
 
 ######################################
@@ -74,7 +75,7 @@ class DBManager(object):
             current_app.logger.error("Can't update the database. Details: %s", str(e))
             raise DBInternalError("Can't update the database")
 
-    def insert_print(self, name: str, filepath):
+    def insert_print(self, name: str, filepath: str, file_id: int):
         if name == "" or filepath == "":
             raise InvalidParameter("The 'name' and the 'filepath' parameter can't be an empty string")
 

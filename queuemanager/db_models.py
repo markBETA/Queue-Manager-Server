@@ -11,12 +11,9 @@ __maintainer__ = "Eloi Pardo"
 __email__ = "epardo@fundaciocim.org"
 __status__ = "Development"
 
-from datetime import datetime
 from flask import current_app
 from flask.cli import with_appcontext
 from flask_sqlalchemy import SQLAlchemy
-from flask_marshmallow import Marshmallow
-from marshmallow import fields
 import click
 
 
@@ -25,7 +22,6 @@ import click
 #################################
 
 db = SQLAlchemy()
-ma = Marshmallow()
 
 
 ########################
@@ -46,35 +42,3 @@ def init_app(app):
     """Initializes the app context for the database operation."""
     db.init_app(app)
     app.cli.add_command(init_db_command)
-
-
-###############################
-# DATABASE MODELS DECLARATION #
-###############################
-
-class Print(db.Model):
-    """
-    Definition of the table Prints that contains all prints
-    """
-    __tablename__ = "Prints"
-
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
-    name = db.Column(db.String(256), unique=True, nullable=False)
-    filepath = db.Column(db.String(256), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
-
-    def __init__(self, name, filepath):
-        self.name = name
-        self.filepath = filepath
-
-    def update(self, **kwargs):
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-
-
-class PrintSchema(ma.Schema):
-    id = fields.Integer()
-    name = fields.String()
-    filepath = fields.String()
-    created_at = fields.DateTime('%d-%m-%YT%H:%M:%S')

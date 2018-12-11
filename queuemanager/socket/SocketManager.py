@@ -1,9 +1,8 @@
 from flask_socketio import SocketIO
 
 from queuemanager.db_manager import DBManager, DBInternalError
-from queuemanager.db_models import PrintSchema
+from queuemanager.models.Print import PrintSchema
 
-print_schema = PrintSchema()
 prints_schema = PrintSchema(many=True)
 
 
