@@ -127,3 +127,20 @@ class DBManager(object):
             self.commit_changes()
 
         return print_
+
+    def update_print(self, print_id, **kwargs):
+        try:
+            print_ = Print.query.get(print_id)
+            print_.update(**kwargs)
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't update the print with id '%s' Details: %s", print_id, str(e))
+            raise DBInternalError("Can't update the print with id '{}'".format(print_id))
+        except ormexc.UnmappedInstanceError as e:
+            current_app.logger.error("Can't update the print with id '%s' Details: %s", print_id, str(e))
+            raise DBInternalError("Can't update the print with id '{}'".format(print_id))
+
+        # Commit changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
+        return print_

@@ -67,6 +67,11 @@ class Print(db.Model):
         self.name = name
         self.filepath = filepath
 
+    def update(self, **kwargs):
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
 
 class PrintSchema(ma.Schema):
     id = fields.Integer()

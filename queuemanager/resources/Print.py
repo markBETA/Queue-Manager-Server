@@ -123,4 +123,24 @@ class Print(Resource):
 
         socket_manager.send_prints(**{"broadcast": True})
 
-        return print_schema.dump(print_).data, 202
+        return print_schema.dump(print_).data, 200
+
+    def put(self, print_id):
+        """
+        Updates the print with id==print_id
+        """
+        try:
+            json_data = request.get_json(force=True)
+        except BadRequest:
+            json_data = json.loads(json.dumps(request.form))
+        if not json_data:
+            return {'message': 'No input data provided'}, 400
+
+        try:
+            print_ = db.update_print(print_id, **json_data)
+        except DBInternalError:
+            return {'message': 'Unable to delete from the database'}, 500
+        except DBManagerError as e:
+            return {'message': str(e)}, 400
+
+        return print_schema.dump(print_).data, 200
