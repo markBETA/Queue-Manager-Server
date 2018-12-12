@@ -14,6 +14,7 @@ from werkzeug.exceptions import BadRequest
 from queuemanager.db_manager import DBManagerError, DBInternalError, DBManager, UniqueConstraintError
 from queuemanager.models.Job import JobSchema
 from queuemanager.socket.SocketManager import SocketManager
+from queuemanager.utils import GCodeReader
 
 
 db = DBManager()
@@ -61,6 +62,7 @@ class JobList(Resource):
 
         gcode = request.files.get('gcode')
         gcode_name = gcode.filename
+        time, filament, extruders = GCodeReader.get_values(gcode)
         if gcode_name.rsplit('.', 1)[1].lower() != 'gcode':
             return {'message': 'The file format must be "gcode"'}, 400
 
@@ -68,7 +70,7 @@ class JobList(Resource):
 
 
         try:
-            job = db.insert_job(json_data['name'], filepath)
+            job = db.insert_job(json_data['name'], gcode_name, filepath, time, filament, extruders)
             db.commit_changes()
         except UniqueConstraintError:
             return {'message': 'Print name is not unique'}, 409

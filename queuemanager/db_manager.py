@@ -17,6 +17,7 @@ from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
 from queuemanager.db import db
 from queuemanager.models.Job import Job
+from queuemanager.models.File import File
 
 
 ######################################
@@ -75,14 +76,17 @@ class DBManager(object):
             current_app.logger.error("Can't update the database. Details: %s", str(e))
             raise DBInternalError("Can't update the database")
 
-    def insert_job(self, name: str, filepath: str):
-        if name == "" or filepath == "":
-            raise InvalidParameter("The 'name' and the 'filepath' parameter can't be an empty string")
+    def insert_job(self, name: str, gcode_name: str, filepath: str, time: int, filament: float, extruders):
+        if name == "" or filepath == "" or gcode_name == "":
+            raise InvalidParameter("The 'name', the 'gcode_name' and 'filepath' parameter can't be an empty string")
 
-        job = Job(name, filepath)
+        job = Job(name=name)
+        file = File(name=gcode_name, path=filepath, time=time, used_extruders=extruders, used_material=filament)
+        file.jobs.append(job)
 
         # Add the print row
         db.session.add(job)
+        db.session.add(file)
 
         # Commit changes to the database
         if self.autocommit:
