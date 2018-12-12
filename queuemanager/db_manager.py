@@ -15,8 +15,8 @@ __status__ = "Development"
 from flask import current_app
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
-from queuemanager.db_models import db
-from queuemanager.models.Print import Print
+from queuemanager.db import db
+from queuemanager.models.Job import Job
 
 
 ######################################
@@ -75,75 +75,73 @@ class DBManager(object):
             current_app.logger.error("Can't update the database. Details: %s", str(e))
             raise DBInternalError("Can't update the database")
 
-    def insert_print(self, name: str, filepath: str):
+    def insert_job(self, name: str, filepath: str):
         if name == "" or filepath == "":
             raise InvalidParameter("The 'name' and the 'filepath' parameter can't be an empty string")
 
-        print_ = Print(name, filepath)
+        job = Job(name, filepath)
 
         # Add the print row
-        db.session.add(print_)
+        db.session.add(job)
 
         # Commit changes to the database
         if self.autocommit:
             self.commit_changes()
 
-        return print_
+        return job
 
-    def get_print(self, print_id):
+    def get_job(self, job_id):
         # Get the print
-        if print_id is not None:
+        if job_id is not None:
             try:
-                _print = Print.query.get(print_id)
+                job = Job.query.get(job_id)
             except exc.SQLAlchemyError as e:
-                current_app.logger.error("Can't retrieve print with id '%s'. Details: %s", print_id, str(e))
-                raise DBInternalError("Can't retrieve print with id '{}'".format(print_id))
+                current_app.logger.error("Can't retrieve print with id '%s'. Details: %s", job_id, str(e))
+                raise DBInternalError("Can't retrieve print with id '{}'".format(job_id))
         else:
-            raise InvalidParameter("Print_id can't be None")
+            raise InvalidParameter("Job_id can't be None")
 
-        return _print
+        return job
 
-    def get_prints(self):
+    def get_jobs(self):
         try:
-            prints = Print.query.all()
+            jobs = Job.query.all()
         except exc.SQLAlchemyError as e:
-            current_app.logger.error("Can't retrieve prints Details: %s", str(e))
-            raise DBInternalError("Can't retrieve prints")
+            current_app.logger.error("Can't retrieve jobs Details: %s", str(e))
+            raise DBInternalError("Can't retrieve jobs")
 
-        return prints
+        return jobs
 
-    def delete_print(self, print_id):
+    def delete_job(self, job_id):
         try:
-            print_ = Print.query.get(print_id)
-            db.session.delete(print_)
+            job = Job.query.get(job_id)
+            db.session.delete(job)
         except exc.SQLAlchemyError as e:
-            current_app.logger.error("Can't delete the print with id '%s' Details: %s", print_id, str(e))
-            raise DBInternalError("Can't delete the print with id '{}'".format(print_id))
+            current_app.logger.error("Can't delete the job with id '%s' Details: %s", job_id, str(e))
+            raise DBInternalError("Can't delete the job with id '{}'".format(job_id))
         except ormexc.UnmappedInstanceError as e:
-            current_app.logger.error("Can't delete the print with id '%s' Details: %s", print_id, str(e))
-            raise DBInternalError("Can't delete the print with id '{}'".format(print_id))
+            current_app.logger.error("Can't delete the job with id '%s' Details: %s", job_id, str(e))
+            raise DBInternalError("Can't delete the job with id '{}'".format(job_id))
 
         # Commit changes to the database
         if self.autocommit:
             self.commit_changes()
 
-        return print_
+        return job
 
-    def update_print(self, print_id, **kwargs):
+    def update_job(self, job_id, **kwargs):
         try:
-            print_ = Print.query.get(print_id)
-            print_.update(**kwargs)
-            # print_.name = kwargs.get("name")
-            # db.session.flush()
+            job = Job.query.get(job_id)
+            job.update(**kwargs)
         except exc.SQLAlchemyError as e:
-            current_app.logger.error("Can't update the print with id '%s' Details: %s", print_id, str(e))
-            raise DBInternalError("Can't update the print with id '{}'".format(print_id))
+            current_app.logger.error("Can't update the job with id '%s' Details: %s", job_id, str(e))
+            raise DBInternalError("Can't update the job with id '{}'".format(job_id))
         except ormexc.UnmappedInstanceError as e:
-            current_app.logger.error("Can't update the print with id '%s' Details: %s", print_id, str(e))
-            raise DBInternalError("Can't update the print with id '{}'".format(print_id))
+            current_app.logger.error("Can't update the job with id '%s' Details: %s", job_id, str(e))
+            raise DBInternalError("Can't update the job with id '{}'".format(job_id))
 
         # Commit changes to the database
         if self.autocommit:
             self.commit_changes()
 
-        return print_
+        return job

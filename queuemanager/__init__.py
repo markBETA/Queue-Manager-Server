@@ -37,8 +37,8 @@ def create_app(test_config=None):
     os.makedirs(app.config.get('GCODE_STORAGE_PATH'), exist_ok=True)
 
     # register the database commands
-    from . import db_models
-    db_models.init_app(app)
+    from . import db
+    db.init_app(app)
 
     SocketManager.get_instance().init_app(app)
 

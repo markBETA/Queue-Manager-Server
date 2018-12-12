@@ -1,9 +1,9 @@
 from flask_socketio import SocketIO
 
 from queuemanager.db_manager import DBManager, DBInternalError
-from queuemanager.models.Print import PrintSchema
+from queuemanager.models.Job import JobSchema
 
-prints_schema = PrintSchema(many=True)
+jobs_schema = JobSchema(many=True)
 
 
 class SocketManager:
@@ -28,13 +28,13 @@ class SocketManager:
     def init_app(self, app):
         self.sio.init_app(app)
 
-    def send_prints(self, **kwargs):
+    def send_jobs(self, **kwargs):
         try:
-            prints = self._db.get_prints()
+            jobs = self._db.get_jobs()
         except DBInternalError:
             return
 
-        self.sio.emit("queues", prints_schema.jsonify(prints).json, namespace="/client", **kwargs)
+        self.sio.emit("queues", jobs_schema.jsonify(jobs).json, namespace="/client", **kwargs)
 
     def send_printer_state(self, **kwargs):
         self.sio.emit("printer_state", self.printer_state, namespace="/client", **kwargs)

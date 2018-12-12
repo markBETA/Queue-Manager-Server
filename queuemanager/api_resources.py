@@ -12,7 +12,7 @@ __status__ = "Development"
 
 from flask import Blueprint
 from flask_restful import Api
-from queuemanager.resources.Print import Print, PrintList
+from queuemanager.resources.Job import Job, JobList
 
 # GLOBAL VARIABLES
 api_bp = Blueprint('queuemanagerapi', __name__, url_prefix='/queuemanagerapi')
@@ -20,5 +20,5 @@ api = Api(api_bp)
 
 
 # Routes definitions
-api.add_resource(PrintList, '/prints')
-api.add_resource(Print, '/prints/<print_id>')
+api.add_resource(JobList, '/jobs')
+api.add_resource(Job, '/jobs/<job_id>')
