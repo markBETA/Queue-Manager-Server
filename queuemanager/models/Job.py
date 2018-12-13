@@ -2,6 +2,7 @@ from datetime import datetime
 from marshmallow import fields
 from flask_marshmallow import Marshmallow
 from queuemanager.db import db
+from .File import FileSchema
 
 ma = Marshmallow()
 
@@ -29,3 +30,4 @@ class JobSchema(ma.Schema):
     name = fields.String()
     created_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
     updated_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
+    file = fields.Nested(FileSchema)

@@ -21,3 +21,12 @@ class File(db.Model):
     used_material = db.Column(db.Float)
     jobs = db.relationship("Job", backref="file")
 
+class FileSchema(ma.Schema):
+    id = fields.Integer()
+    name = fields.String()
+    loaded_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
+    path = fields.String()
+    time = fields.Integer()
+    used_extruders = fields.Dict()
+    used_material = fields.Float()
+
