@@ -34,11 +34,11 @@ class JobList(Resource):
         Returns all jobs in the database
         """
         try:
-            prints = db.get_jobs()
+            jobs = db.get_jobs()
         except DBInternalError:
             return {'message': 'Unable to read the data from the database'}, 500
 
-        return jobs_schema.dump(prints).data, 200
+        return jobs_schema.dump(jobs).data, 200
 
     def post(self):
         """
