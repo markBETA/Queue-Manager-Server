@@ -4,19 +4,17 @@ import re
 
 def get_values(gcode_file: FileStorage):
     gcode = gcode_file.stream.read()
-    rtime = re.findall(b"(?<=;TIME:)\d*", gcode)
-    time = int(rtime[0])
-    rfilament = re.findall(b"(?<=;Filament used: )(.*)(?=m)", gcode)
-    filament = float(rfilament[0])
-    rextruders = re.findall(b"(?<=;Extruders used: )(.*)(?=\\r)", gcode)
-    extruders = rextruders[0].decode("utf-8")
+    time_match = re.search(b"(?<=;TIME:)\d*", gcode)
+    time = int(time_match.group()) if time_match else None
+    filament_match = re.search(b"(?<=;Filament used: )\d*\.?\d*", gcode)
+    filament = float(filament_match.group()) if filament_match else None
+    extruders_match = re.search(b"(?<=;Extruders used: )(.*)", gcode)
+    if extruders_match:
+        extruders = {}
+        for match in re.finditer(b"(?<=T)[0-9\s.]*", extruders_match.group()):
+            key, value = match.group().split()
+            extruders[key.decode("utf-8")] = value.decode("utf-8")
+    else:
+        extruders = None
+
     return time, filament, extruders
-
-
-
-"""
-;TIME:8166
-;Filament used: 2.06452m
-;Extruders used: T0 0.6
-"""
-
