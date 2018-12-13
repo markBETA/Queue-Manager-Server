@@ -17,7 +17,7 @@ from queuemanager.socket.SocketManager import SocketManager
 from queuemanager.utils import GCodeReader
 
 
-db = DBManager()
+db = DBManager(autocommit=False)
 socket_manager = SocketManager.get_instance()
 
 job_schema = JobSchema()
@@ -72,8 +72,14 @@ class JobList(Resource):
         try:
             job = db.insert_job(json_data['name'], gcode_name, filepath, time, filament, extruders)
             db.commit_changes()
-        except UniqueConstraintError:
-            return {'message': 'Print name is not unique'}, 409
+        except UniqueConstraintError as e:
+            if "files.name" in str(e):
+                return {'message': 'File name already exists'}, 409
+            elif "jobs.name" in str(e):
+                return {'message': 'Job name already exists'}, 409
+            else:
+                return {'message': str(e)}
+
         except DBInternalError:
             return {'message': 'Unable to write the new entry to the database'}, 500
         except DBManagerError as e:
