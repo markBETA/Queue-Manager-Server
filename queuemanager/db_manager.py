@@ -18,6 +18,7 @@ from sqlalchemy.orm import exc as ormexc
 from queuemanager.db import db
 from queuemanager.models.Job import Job
 from queuemanager.models.File import File
+from queuemanager.models.Queue import Queue
 
 
 ######################################

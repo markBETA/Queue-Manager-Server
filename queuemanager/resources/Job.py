@@ -11,6 +11,7 @@ import os
 from flask_restful import Resource
 from flask import request, json, current_app
 from werkzeug.exceptions import BadRequest
+from werkzeug.utils import secure_filename
 from queuemanager.db_manager import DBManagerError, DBInternalError, DBManager, UniqueConstraintError
 from queuemanager.models.Job import JobSchema
 from queuemanager.socket.SocketManager import SocketManager
@@ -61,12 +62,14 @@ class JobList(Resource):
                 return {'message': "Invalid parameter '" + key + "'"}, 400
 
         gcode = request.files.get('gcode')
-        gcode_name = gcode.filename
+        if not gcode:
+            return {'message': 'There is no gcode file'}, 400
+        gcode_name = secure_filename(gcode.filename)
+        filepath = os.path.join(current_app.config.get('GCODE_STORAGE_PATH'), gcode_name)
+
         time, filament, extruders = GCodeReader.get_values(gcode)
         if gcode_name.rsplit('.', 1)[1].lower() != 'gcode':
             return {'message': 'The file format must be "gcode"'}, 400
-
-        filepath = os.path.join(current_app.config.get('GCODE_STORAGE_PATH'), gcode_name)
 
 
         try:
@@ -85,7 +88,8 @@ class JobList(Resource):
         except DBManagerError as e:
             return {'message': str(e)}, 400
 
-        gcode.save(filepath + '.' + str(job.id))
+        # gcode.save(filepath + '.' + str(job.id))
+        gcode.save(filepath)
         # try:
         #     headers = {'X-Api-Key': 'AAFBCFB524CB4A289B036A434903E47A'}
         #     files = {'file': (gcode_name, gcode, 'application/octet-stream'), 'print': True}

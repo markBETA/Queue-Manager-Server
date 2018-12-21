@@ -18,6 +18,7 @@ class Job(db.Model):
     created_at = db.Column(db.DateTime(), default=datetime.now, nullable=False)
     updated_at = db.Column(db.DateTime(), onupdate=datetime.now)
     file_id = db.Column(db.Integer, db.ForeignKey("files.id"))
+    # queue_id = db.Column(db.Integer, db.ForeignKey("queues.id"))
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
