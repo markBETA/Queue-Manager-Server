@@ -1,6 +1,5 @@
 from werkzeug.datastructures import FileStorage
 import re
-import tempfile
 
 
 def get_values(gcode_file: FileStorage):
@@ -17,5 +16,7 @@ def get_values(gcode_file: FileStorage):
             extruders[key.decode("utf-8")] = value.decode("utf-8")
     else:
         extruders = None
+
+    gcode_file.seek(0)
 
     return time, filament, extruders
