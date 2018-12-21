@@ -4,9 +4,7 @@ import tempfile
 
 
 def get_values(gcode_file: FileStorage):
-    temp_gcode = tempfile.TemporaryFile()
-    gcode_file.save(temp_gcode)
-    gcode = temp_gcode.read()
+    gcode = gcode_file.read()
     time_match = re.search(b"(?<=;TIME:)\d*", gcode)
     time = int(time_match.group()) if time_match else None
     filament_match = re.search(b"(?<=;Filament used: )\d*\.?\d*", gcode)
@@ -19,7 +17,5 @@ def get_values(gcode_file: FileStorage):
             extruders[key.decode("utf-8")] = value.decode("utf-8")
     else:
         extruders = None
-
-    temp_gcode.close()
 
     return time, filament, extruders
