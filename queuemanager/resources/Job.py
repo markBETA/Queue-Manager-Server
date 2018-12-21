@@ -125,13 +125,13 @@ class Job(Resource):
         """
         try:
             job = db.delete_job(job_id)
+            filepath = job.file.path
             db.commit_changes()
+            os.remove(filepath)
         except DBInternalError:
             return {'message': 'Unable to delete from the database'}, 500
         except DBManagerError as e:
             return {'message': str(e)}, 400
-
-        os.remove(job.filepath + '.' + job_id)
 
         socket_manager.send_jobs(**{"broadcast": True})
 
