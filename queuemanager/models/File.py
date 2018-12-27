@@ -15,7 +15,7 @@ class File(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     name = db.Column(db.String(256), unique=True, nullable=False)
     loaded_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
-    path = db.Column(db.String(256), nullable=False)
+    path = db.Column(db.String(256), unique=True, nullable=False)
     time = db.Column(db.Integer)
     used_extruders = db.Column(db.PickleType)
     used_material = db.Column(db.Float)
