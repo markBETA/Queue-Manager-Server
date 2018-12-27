@@ -120,6 +120,7 @@ class DBManager(object):
     def delete_job(self, job_id):
         try:
             job = Job.query.get(job_id)
+            db.session.delete(job.file)
             db.session.delete(job)
         except exc.SQLAlchemyError as e:
             current_app.logger.error("Can't delete the job with id '%s' Details: %s", job_id, str(e))
