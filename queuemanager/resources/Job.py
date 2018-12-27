@@ -78,6 +78,8 @@ class JobList(Resource):
         except UniqueConstraintError as e:
             if "files.name" in str(e):
                 return {'message': 'File name already exists'}, 409
+            elif "files.path" in str(e):
+                return {'message': 'File path already exists'}, 409
             elif "jobs.name" in str(e):
                 return {'message': 'Job name already exists'}, 409
             else:
@@ -125,13 +127,15 @@ class Job(Resource):
         """
         try:
             job = db.delete_job(job_id)
+            filepath = job.file.path
             db.commit_changes()
+            os.remove(filepath)
         except DBInternalError:
             return {'message': 'Unable to delete from the database'}, 500
         except DBManagerError as e:
             return {'message': str(e)}, 400
-
-        os.remove(job.filepath + '.' + job_id)
+        except Exception as e:
+            return {'message': str(e)}, 500
 
         socket_manager.send_jobs(**{"broadcast": True})
 
