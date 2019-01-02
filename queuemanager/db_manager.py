@@ -19,6 +19,7 @@ from queuemanager.db import db
 from queuemanager.models.Job import Job
 from queuemanager.models.File import File
 from queuemanager.models.Queue import Queue
+from queuemanager.models.Extruder import Extruder
 
 
 ######################################
@@ -82,8 +83,12 @@ class DBManager(object):
             raise InvalidParameter("The 'name', the 'gcode_name' and 'filepath' parameter can't be an empty string")
 
         job = Job(name=name)
-        file = File(name=gcode_name, path=filepath, time=time, used_extruders=extruders, used_material=filament)
+        file = File(name=gcode_name, path=filepath, time=time, used_material=filament)
         file.jobs.append(job)
+        for key, value in extruders.items():
+            extruder = Extruder.query.filter_by(index=key, nozzle_diameter=value).first()
+            if extruder:
+                file.used_extruders.append(extruder)
 
         # Add the print row
         db.session.add(job)
@@ -143,7 +148,7 @@ class DBManager(object):
             current_app.logger.error("Can't update the job with id '%s' Details: %s", job_id, str(e))
             raise DBInternalError("Can't update the job with id '{}'".format(job_id))
         except ormexc.UnmappedInstanceError as e:
-            current_app.logger.error("Can't update the job with id '%s' Details: %s", job_id, str(e))
+            current_app.logger.error("Can.'t update the job with id '%s' Details: %s", job_id, str(e))
             raise DBInternalError("Can't update the job with id '{}'".format(job_id))
 
         # Commit changes to the database
@@ -151,3 +156,19 @@ class DBManager(object):
             self.commit_changes()
 
         return job
+
+    def update_queue(self, printer_info):
+        queue = Queue.query.filter_by(name="active").first()
+        if not queue.used_extruders:
+            for key, value in printer_info.items():
+                extruder = Extruder.query.filter_by(index=key, nozzle_diameter=value).first()
+                queue.used_extruders.append(extruder)
+
+        else:
+            new_used_extruders = []
+            for key, value in printer_info.items():
+                new_used_extruders.append(Extruder.query.filter_by(index=key, nozzle_diameter=value).first())
+            queue.used_extruders = new_used_extruders
+
+        if self.autocommit:
+            self.commit_changes()

@@ -1,7 +1,9 @@
 from flask import current_app, request
 from flask_socketio import Namespace
-
+from queuemanager.db_manager import DBManager
 from .SocketManager import SocketManager
+
+db = DBManager()
 
 
 class OctopiNamespace(Namespace):
@@ -23,3 +25,6 @@ class OctopiNamespace(Namespace):
         }
         self._socket_manager.printer_state = state
         self._socket_manager.send_printer_state(**kwargs)
+
+    def on_printer_info(self, printer_info):
+        db.update_queue(printer_info)
