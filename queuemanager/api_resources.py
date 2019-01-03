@@ -11,14 +11,11 @@ __email__ = "epardo@fundaciocim.org"
 __status__ = "Development"
 
 from flask import Blueprint
-from flask_restful import Api
-from queuemanager.resources.Job import Job, JobList
+from flask_restplus import Api
+
+from queuemanager.resources.Job import api as jobs_namespace
 
 # GLOBAL VARIABLES
 api_bp = Blueprint('queuemanagerapi', __name__, url_prefix='/queuemanagerapi')
-api = Api(api_bp)
-
-
-# Routes definitions
-api.add_resource(JobList, '/jobs')
-api.add_resource(Job, '/jobs/<job_id>')
+api = Api(api_bp, doc="/doc", title="Queue Manager Server", description="Server to manage a queue of jobs to be printed")
+api.add_namespace(jobs_namespace)

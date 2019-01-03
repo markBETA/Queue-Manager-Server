@@ -8,8 +8,9 @@ __status__ = "Development"
 
 import os
 
-from flask_restful import Resource
 from flask import request, json, current_app
+from flask_restplus import Resource, Namespace, reqparse
+from werkzeug.datastructures import FileStorage
 from werkzeug.exceptions import BadRequest
 from werkzeug.utils import secure_filename
 from queuemanager.db_manager import DBManagerError, DBInternalError, DBManager, UniqueConstraintError
@@ -17,6 +18,7 @@ from queuemanager.models.Job import JobSchema
 from queuemanager.socket.SocketManager import SocketManager
 from queuemanager.utils import GCodeReader
 
+api = Namespace("jobs", description="Jobs related operations")
 
 db = DBManager(autocommit=False)
 socket_manager = SocketManager.get_instance()
@@ -25,11 +27,14 @@ job_schema = JobSchema()
 jobs_schema = JobSchema(many=True)
 
 
+@api.route("")
 class JobList(Resource):
     """
     /jobs
     """
-
+    @api.doc(id="getJobs")
+    @api.response(200, "Success")
+    @api.response(500, "Unable to read the data from the database")
     def get(self):
         """
         Returns all jobs in the database
@@ -41,39 +46,34 @@ class JobList(Resource):
 
         return jobs_schema.dump(jobs).data, 200
 
+    @api.doc(id="postJob")
+    @api.response(201, "Success")
+    @api.response(400, 'The file format must be "gcode"')
+    @api.response(409, "File name already exists")
+    @api.response(409, "File path already exists")
+    @api.response(409, "Job name already exists")
+    @api.response(500, "Unable to write the new entry to the database")
     def post(self):
         """
         Register a new job in the database
         """
-        try:
-            json_data = request.get_json(force=True)
-        except BadRequest:
-            json_data = json.loads(json.dumps(request.form))
-        if not json_data:
-            return {'message': 'No input data provided'}, 400
+        parser = reqparse.RequestParser(bundle_errors=True)
+        parser.add_argument("name", type=str, required=True, location="form", help="Name cannot be blank!")
+        parser.add_argument("gcode", type=FileStorage, required=True, location="files", help="Gcode cannot be blank!")
+        args = parser.parse_args()
 
-        # Check that the retrieved data has all parameters
-        if not {"name"}.issubset(json_data.keys()):
-            return {'message': 'Missing JSON keys'}, 400
-
-        # Iterate over data received keys for checking that there are correct
-        for key in json_data:
-            if key != "name" and type(json_data[key]) != str:
-                return {'message': "Invalid parameter '" + key + "'"}, 400
-
-        gcode = request.files.get('gcode')
-        if not gcode:
-            return {'message': 'There is no gcode file'}, 400
-        gcode_name = secure_filename(gcode.filename)
+        job_name = args["name"]
+        gcode_file = args["gcode"]
+        gcode_name = secure_filename(gcode_file.filename)
         filepath = os.path.join(current_app.config.get('GCODE_STORAGE_PATH'), gcode_name)
 
-        time, filament, extruders = GCodeReader.get_values(gcode)
+        time, filament, extruders = GCodeReader.get_values(gcode_file)
         if gcode_name.rsplit('.', 1)[1].lower() != 'gcode':
             return {'message': 'The file format must be "gcode"'}, 400
 
 
         try:
-            job = db.insert_job(json_data['name'], gcode_name, filepath, time, filament, extruders)
+            job = db.insert_job(job_name, gcode_name, filepath, time, filament, extruders)
             db.commit_changes()
         except UniqueConstraintError as e:
             if "files.name" in str(e):
@@ -83,7 +83,7 @@ class JobList(Resource):
             elif "jobs.name" in str(e):
                 return {'message': 'Job name already exists'}, 409
             else:
-                return {'message': str(e)}
+                return {'message': str(e)}, 409
 
         except DBInternalError:
             return {'message': 'Unable to write the new entry to the database'}, 500
@@ -91,7 +91,7 @@ class JobList(Resource):
             return {'message': str(e)}, 400
 
         # gcode.save(filepath + '.' + str(job.id))
-        gcode.save(filepath)
+        gcode_file.save(filepath)
         # try:
         #     headers = {'X-Api-Key': 'AAFBCFB524CB4A289B036A434903E47A'}
         #     files = {'file': (gcode_name, gcode, 'application/octet-stream'), 'print': True}
@@ -105,11 +105,14 @@ class JobList(Resource):
         return job_schema.dump(job).data, 201
 
 
+@api.route("/<job_id>")
 class Job(Resource):
     """
     /jobs/<job_id>
     """
-
+    @api.doc(id="getJob")
+    @api.response(200, "Success")
+    @api.response(500, "Unable to read the data from the database")
     def get(self, job_id):
         """
         Returns the job with id==job_id
@@ -121,6 +124,9 @@ class Job(Resource):
 
         return job_schema.dump(job).data, 200
 
+    @api.doc("deleteJob")
+    @api.response(200, "Success")
+    @api.response(500, "Unable to delete from the database")
     def delete(self, job_id):
         """
         Deletes the job with id==job_id
@@ -141,6 +147,10 @@ class Job(Resource):
 
         return job_schema.dump(job).data, 200
 
+    @api.doc(id="updateJob")
+    @api.response(200, "Success")
+    @api.response(400, "No input data provided")
+    @api.response(500, "Unable to update the database")
     def put(self, job_id):
         """
         Updates the job with id==job_id
@@ -155,7 +165,7 @@ class Job(Resource):
         try:
             job = db.update_job(job_id, **json_data)
         except DBInternalError:
-            return {'message': 'Unable to delete from the database'}, 500
+            return {'message': 'Unable to update the database'}, 500
         except DBManagerError as e:
             return {'message': str(e)}, 400
 

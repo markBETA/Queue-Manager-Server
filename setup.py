@@ -19,6 +19,7 @@ setup(
         'flask-marshmallow',
         'flask-socketio',
         'flask-cors',
+        'flask-restplus',
         'sqlalchemy',
         'marshmallow-sqlalchemy',
         'click',
