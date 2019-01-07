@@ -115,7 +115,7 @@ class Job(Resource):
     @api.response(500, "Unable to read the data from the database")
     def get(self, job_id):
         """
-        Returns the job with id==job_id
+        Returns the job with id=job_id
         """
         try:
             job = db.get_job(job_id)
@@ -129,7 +129,7 @@ class Job(Resource):
     @api.response(500, "Unable to delete from the database")
     def delete(self, job_id):
         """
-        Deletes the job with id==job_id
+        Deletes the job with id=job_id
         """
         try:
             job = db.delete_job(job_id)
@@ -155,7 +155,7 @@ class Job(Resource):
     @api.response(500, "Unable to update the database")
     def put(self, job_id):
         """
-        Updates the job with id==job_id
+        Updates the job with id=job_id
         """
         try:
             json_data = request.get_json(force=True)
