@@ -21,6 +21,9 @@ class Extruder(db.Model):
 
     __table_args__ = (UniqueConstraint("index", "nozzle_diameter", "brand"),)
 
+    # def __eq__(self, other):
+    #     return self.index == other.index and self.nozzle_diameter == other.nozzle_diameter
+
 
 class ExtruderSchema(ma.Schema):
     id = fields.Integer()

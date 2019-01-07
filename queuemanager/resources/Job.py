@@ -105,7 +105,7 @@ class JobList(Resource):
         return job_schema.dump(job).data, 201
 
 
-@api.route("/<job_id>")
+@api.route("/<int:job_id>")
 class Job(Resource):
     """
     /jobs/<job_id>
@@ -133,6 +133,8 @@ class Job(Resource):
         """
         try:
             job = db.delete_job(job_id)
+            if not job:
+                return {"message": "Job with id=%d doesn't exist" % job_id}, 404
             filepath = job.file.path
             db.commit_changes()
             os.remove(filepath)
@@ -164,6 +166,9 @@ class Job(Resource):
 
         try:
             job = db.update_job(job_id, **json_data)
+            if not job:
+                return {"message": "Job with id=%d doesn't exist" % job_id}, 404
+            db.commit_changes()
         except DBInternalError:
             return {'message': 'Unable to update the database'}, 500
         except DBManagerError as e:

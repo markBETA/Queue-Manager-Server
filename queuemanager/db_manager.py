@@ -78,21 +78,36 @@ class DBManager(object):
             current_app.logger.error("Can't update the database. Details: %s", str(e))
             raise DBInternalError("Can't update the database")
 
+    # Job Operations
+
     def insert_job(self, name: str, gcode_name: str, filepath: str, time: int, filament: float, extruders):
         if name == "" or filepath == "" or gcode_name == "":
             raise InvalidParameter("The 'name', the 'gcode_name' and 'filepath' parameter can't be an empty string")
 
         job = Job(name=name)
         file = File(name=gcode_name, path=filepath, time=time, used_material=filament)
-        file.jobs.append(job)
-        for key, value in extruders.items():
-            extruder = Extruder.query.filter_by(index=key, nozzle_diameter=value).first()
-            if extruder:
-                file.used_extruders.append(extruder)
+        job.file = file
+        queue = Queue.query.filter_by(active=True).first()
+        if extruders:
+            for key, value in extruders.items():
+                extruder = Extruder.query.filter_by(index=key, nozzle_diameter=value).first()
+                if extruder:
+                    file.used_extruders.append(extruder)
+
+            for extruder in file.used_extruders:
+                if not extruder in queue.used_extruders:
+                    waiting_queue = Queue.query.filter_by(active=False).first()
+                    waiting_queue.jobs.append(job)
+                    break
+            else:
+                queue.jobs.append(job)
+        else:
+            queue.jobs.append(job)
 
         # Add the print row
-        db.session.add(job)
         db.session.add(file)
+        db.session.add(job)
+        db.session.add(queue)
 
         # Commit changes to the database
         if self.autocommit:
@@ -125,6 +140,8 @@ class DBManager(object):
     def delete_job(self, job_id):
         try:
             job = Job.query.get(job_id)
+            if not job:
+                return None
             db.session.delete(job.file)
             db.session.delete(job)
         except exc.SQLAlchemyError as e:
@@ -143,7 +160,9 @@ class DBManager(object):
     def update_job(self, job_id, **kwargs):
         try:
             job = Job.query.get(job_id)
-            job.update(**kwargs)
+            if not job:
+                return None
+            job.update_helper(**kwargs)
         except exc.SQLAlchemyError as e:
             current_app.logger.error("Can't update the job with id '%s' Details: %s", job_id, str(e))
             raise DBInternalError("Can't update the job with id '{}'".format(job_id))
@@ -156,6 +175,39 @@ class DBManager(object):
             self.commit_changes()
 
         return job
+
+    # Queue operations
+
+    def get_queue_by_id(self, queue_id):
+        # Get the print
+        if queue_id is not None:
+            try:
+                queue = Queue.query.get(queue_id)
+            except exc.SQLAlchemyError as e:
+                current_app.logger.error("Can't retrieve queue with id '%s'. Details: %s", queue_id, str(e))
+                raise DBInternalError("Can't retrieve queue with id '{}'".format(queue_id))
+        else:
+            raise InvalidParameter("Queue id can't be None")
+
+        return queue
+
+    def get_queues(self):
+        try:
+            queues = Queue.query.all()
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't retrieve queues Details: %s", str(e))
+            raise DBInternalError("Can't retrieve queues")
+
+        return queues
+
+    def get_queue(self, active):
+        try:
+            queue = Queue.query.filter_by(active=active).first()
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't retrieve queue Details: %s", str(e))
+            raise DBInternalError("Can't retrieve queue")
+
+        return queue
 
     def update_queue(self, printer_info):
         queue = Queue.query.filter_by(name="active").first()

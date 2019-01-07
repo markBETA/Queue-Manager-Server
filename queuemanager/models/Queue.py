@@ -2,6 +2,7 @@ from datetime import datetime
 from marshmallow import fields
 from flask_marshmallow import Marshmallow
 from sqlalchemy.event import listens_for
+from sqlalchemy.orm.session import object_session
 from queuemanager.db import db
 from .Job import JobSchema
 from .Extruder import ExtruderSchema
@@ -26,7 +27,7 @@ class Queue(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
     updated_at = db.Column(db.DateTime(), onupdate=datetime.now)
     used_extruders = db.relationship("Extruder", secondary=extruders)
-    jobs = db.relationship("Job", backref="queue")
+    jobs = db.relationship("Job", backref="queue", order_by="Job.order")
 
 
 class QueueSchema(ma.Schema):
@@ -44,3 +45,10 @@ def insert_initial_values(*args, **kwargs):
     db.session.add(Queue(name="waiting", active=False))
 
     db.session.commit()
+
+
+@listens_for(Queue, "after_update")
+def handle_update(mapper, connection, target):
+    if object_session(target).is_modified(target):
+        # TODO handle extruder update
+        pass
