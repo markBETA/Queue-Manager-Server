@@ -49,8 +49,13 @@ def calculate_order(mapper, connection, target):
 
 @listens_for(Job, "before_update")
 def handle_order(mapper, connection, target):
-    old_order = inspect(target).attrs["order"].history.deleted[0]
+    old_order = inspect(target).attrs["order"].history.deleted
+    if len(old_order) == 0:
+        return
+    old_order = old_order[0]
     if old_order > target.order:
-        Job.query.filter(Job.id != target.id, Job.order >= target.order, Job.order < old_order).update({Job.order: Job.order + 1})
+        Job.query.filter(target.queue.id == Job.queue_id, Job.id != target.id, Job.order >= target.order,
+                         Job.order < old_order).update({Job.order: Job.order + 1})
     elif old_order < target.order:
-        Job.query.filter(Job.order <= target.order, Job.order > old_order).update({Job.order: Job.order - 1})
+        Job.query.filter(target.queue.id == Job.queue_id, Job.id != target.id, Job.order <= target.order,
+                         Job.order > old_order).update({Job.order: Job.order - 1})
