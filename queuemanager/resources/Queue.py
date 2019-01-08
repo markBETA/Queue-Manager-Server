@@ -31,26 +31,6 @@ class QueueList(Resource):
         return queues_schema.dump(queues).data, 200
 
 
-@api.route("/<int:queue_id>")
-class Queue(Resource):
-    """
-    /queues/<queue_id>
-    """
-    @api.doc(id="getQueue")
-    @api.response(200, "Success")
-    @api.response(500, "Unable to read the data from the database")
-    def get(self, queue_id):
-        """
-        Returns the queue with id==queue_id
-        """
-        try:
-            queue = db.get_queue(queue_id)
-        except DBInternalError:
-            return {'message': 'Unable to read the data from the database'}, 500
-
-        return queue_schema.dump(queue).data, 200
-
-
 @api.route("/active")
 class ActiveQueue(Resource):
     """
@@ -58,6 +38,7 @@ class ActiveQueue(Resource):
     """
     @api.doc(id="getActiveQueue")
     @api.response(200, "Success")
+    @api.response(404, "The active queue doesn't exist")
     @api.response(500, "Unable to read the data from the database")
     def get(self):
         """
@@ -65,19 +46,12 @@ class ActiveQueue(Resource):
         """
         try:
             queue = db.get_queue(True)
+            if not queue:
+                return {"message": "The active queue doesn't exist"}, 404
         except DBInternalError:
             return {'message': 'Unable to read the data from the database'}, 500
 
         return queue_schema.dump(queue).data, 200
-
-
-@api.route("/active/jobs")
-class ActiveQueueJobs(Resource):
-    def get(self):
-        """
-        Returns the active queue jobs
-        """
-        pass
 
 
 @api.route("/waiting")
@@ -87,6 +61,7 @@ class WaitingQueue(Resource):
     """
     @api.doc(id="getWaitingQueue")
     @api.response(200, "Success")
+    @api.response(404, "The waiting queue doesn't exist")
     @api.response(500, "Unable to read the data from the database")
     def get(self):
         """
@@ -94,6 +69,8 @@ class WaitingQueue(Resource):
         """
         try:
             queue = db.get_queue(False)
+            if not queue:
+                return {"message": "The waiting queue doesn't exist"}, 404
         except DBInternalError:
             return {'message': 'Unable to read the data from the database'}, 500
 

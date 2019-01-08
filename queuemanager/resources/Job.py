@@ -112,6 +112,7 @@ class Job(Resource):
     """
     @api.doc(id="getJob")
     @api.response(200, "Success")
+    @api.response(404, "Job with id=job_id doesn't exist")
     @api.response(500, "Unable to read the data from the database")
     def get(self, job_id):
         """
@@ -119,6 +120,8 @@ class Job(Resource):
         """
         try:
             job = db.get_job(job_id)
+            if not job:
+                return {"message": "Job with id=%d doesn't exist" % job_id}, 404
         except DBInternalError:
             return {'message': 'Unable to read the data from the database'}, 500
 
@@ -126,6 +129,7 @@ class Job(Resource):
 
     @api.doc("deleteJob")
     @api.response(200, "Success")
+    @api.response(404, "Job with id=job_id doesn't exist")
     @api.response(500, "Unable to delete from the database")
     def delete(self, job_id):
         """
@@ -150,22 +154,26 @@ class Job(Resource):
         return job_schema.dump(job).data, 200
 
     @api.doc(id="updateJob")
+    @api.param("name", "Job name", "body", **{"type": str, "example": "benchy"})
+    @api.param("order", "Order", "body", **{"type": int, "example": 3})
     @api.response(200, "Success")
     @api.response(400, "No input data provided")
+    @api.response(404, "Job with id=job_id doesn't exist")
     @api.response(500, "Unable to update the database")
     def put(self, job_id):
         """
         Updates the job with id=job_id
         """
-        try:
-            json_data = request.get_json(force=True)
-        except BadRequest:
-            json_data = json.loads(json.dumps(request.form))
-        if not json_data:
+        parser = reqparse.RequestParser(bundle_errors=True)
+        parser.add_argument("name", type=str, location="form", store_missing=False)
+        parser.add_argument("order", type=int, location="form", store_missing=False)
+        args = parser.parse_args()
+
+        if not bool(args):
             return {'message': 'No input data provided'}, 400
 
         try:
-            job = db.update_job(job_id, **json_data)
+            job = db.update_job(job_id, **args)
             if not job:
                 return {"message": "Job with id=%d doesn't exist" % job_id}, 404
             db.commit_changes()
