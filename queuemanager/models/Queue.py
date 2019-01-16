@@ -33,6 +33,7 @@ class Queue(db.Model):
 class QueueSchema(ma.Schema):
     id = fields.Integer()
     name = fields.String()
+    active = fields.Boolean()
     created_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
     updated_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
     used_extruders = fields.Nested(ExtruderSchema, many=True)
