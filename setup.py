@@ -14,7 +14,6 @@ setup(
     install_requires=[
         'Flask>=1.0',
         'flask-sqlalchemy',
-        'flask-restful',
         'marshmallow==2.15.6',
         'flask-marshmallow',
         'flask-socketio',

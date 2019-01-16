@@ -11,7 +11,6 @@ import os
 from flask import request, json, current_app
 from flask_restplus import Resource, Namespace, reqparse
 from werkzeug.datastructures import FileStorage
-from werkzeug.exceptions import BadRequest
 from werkzeug.utils import secure_filename
 from queuemanager.db_manager import DBManagerError, DBInternalError, DBManager, UniqueConstraintError
 from queuemanager.models.Job import JobSchema
@@ -47,6 +46,8 @@ class JobList(Resource):
         return jobs_schema.dump(jobs).data, 200
 
     @api.doc(id="postJob")
+    @api.param("name", "Job name", "formData", **{"type": str, "required": True})
+    @api.param("gcode", "Gcode file", "formData", **{"type": "File", "required": True})
     @api.response(201, "Success")
     @api.response(400, 'The file format must be "gcode"')
     @api.response(409, "File name already exists")
@@ -70,7 +71,6 @@ class JobList(Resource):
         time, filament, extruders = GCodeReader.get_values(gcode_file)
         if gcode_name.rsplit('.', 1)[1].lower() != 'gcode':
             return {'message': 'The file format must be "gcode"'}, 400
-
 
         try:
             job = db.insert_job(job_name, gcode_name, filepath, time, filament, extruders)
@@ -100,7 +100,7 @@ class JobList(Resource):
         # except Exception as e:
         #     return {'message': str(e)}, 400
 
-        socket_manager.send_jobs(**{"broadcast": True})
+        socket_manager.send_queues(**{"broadcast": True})
 
         return job_schema.dump(job).data, 201
 
@@ -149,13 +149,13 @@ class Job(Resource):
         except Exception as e:
             return {'message': str(e)}, 500
 
-        socket_manager.send_jobs(**{"broadcast": True})
+        socket_manager.send_queues(**{"broadcast": True})
 
         return job_schema.dump(job).data, 200
 
     @api.doc(id="updateJob")
-    @api.param("name", "Job name", "body", **{"type": str, "example": "benchy"})
-    @api.param("order", "Order", "body", **{"type": int, "example": 3})
+    @api.param("name", "Job name", "formData", **{"type": str, "example": "benchy"})
+    @api.param("order", "Order", "formData", **{"type": int, "example": 3})
     @api.response(200, "Success")
     @api.response(400, "No input data provided")
     @api.response(404, "Job with id=job_id doesn't exist")
@@ -181,5 +181,7 @@ class Job(Resource):
             return {'message': 'Unable to update the database'}, 500
         except DBManagerError as e:
             return {'message': str(e)}, 400
+
+        socket_manager.send_queues(**{"broadcast": True})
 
         return job_schema.dump(job).data, 200
