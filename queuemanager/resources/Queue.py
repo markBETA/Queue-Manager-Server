@@ -1,5 +1,4 @@
 from flask_restplus import Resource, Namespace
-from werkzeug.exceptions import BadRequest
 from queuemanager.db_manager import DBManagerError, DBInternalError, DBManager, UniqueConstraintError
 from queuemanager.models.Queue import QueueSchema
 
