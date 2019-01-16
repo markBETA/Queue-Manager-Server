@@ -15,7 +15,7 @@ class ClientNamespace(Namespace):
         kwargs = {
             "room": request.sid
         }
-        self._socket_manager.send_jobs(**kwargs)
+        self._socket_manager.send_queues(**kwargs)
         self._socket_manager.send_printer_state(**kwargs)
 
     def on_disconnect(self):
