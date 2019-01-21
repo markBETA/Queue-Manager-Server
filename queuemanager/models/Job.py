@@ -59,3 +59,8 @@ def handle_order(mapper, connection, target):
     elif old_order < target.order:
         Job.query.filter(target.queue.id == Job.queue_id, Job.id != target.id, Job.order <= target.order,
                          Job.order > old_order).update({Job.order: Job.order - 1})
+
+
+@listens_for(Job, "after_delete")
+def handle_deletion(mapper, connection, target):
+    Job.query.filter(target.queue.id == Job.queue_id, Job.order > target.order).update({Job.order: Job.order - 1})
