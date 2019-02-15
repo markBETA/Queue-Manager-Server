@@ -20,6 +20,7 @@ from queuemanager.models.Job import Job
 from queuemanager.models.File import File
 from queuemanager.models.Queue import Queue
 from queuemanager.models.Extruder import Extruder
+from queuemanager.models.User import User
 
 
 ######################################
@@ -224,3 +225,16 @@ class DBManager(object):
 
         if self.autocommit:
             self.commit_changes()
+
+    def insert_user(self, username, password):
+        user = User(username=username)
+        user.hash_password(password)
+
+        # Add the user row
+        db.session.add(user)
+
+        # Commit changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
+        return user
