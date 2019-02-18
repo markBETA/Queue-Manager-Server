@@ -28,13 +28,17 @@ db = SQLAlchemy()
 # DATABASE INITIALIZER #
 ########################
 
-@click.command('init-db')
-@with_appcontext
-def init_db_command():
-    """Creates new tables."""
+def init_db():
+    """Clear existing data and create new tables."""
     with current_app.app_context():
         db.drop_all()
         db.create_all()
+
+
+@click.command('init-db')
+@with_appcontext
+def init_db_command():
+    init_db()
     click.echo('Database created successfully.')
 
 
