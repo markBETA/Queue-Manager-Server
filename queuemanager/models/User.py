@@ -20,12 +20,13 @@ class User(db.Model):
     password = db.Column(db.String(256), nullable=False)
     admin = db.Column(db.Boolean, nullable=False, default=False)
     registered_on = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    jobs = db.relationship("Job", backref="user")
 
     def hash_password(self, password):
         self.password = generate_password_hash(password)
 
     def verify_password(self, password):
-        check_password_hash(self.password, password)
+        return check_password_hash(self.password, password)
 
     @staticmethod
     def encode_auth_token(user_id):
@@ -61,3 +62,10 @@ class User(db.Model):
             return 'Signature expired. Please log in again.'
         except jwt.InvalidTokenError:
             return 'Invalid token. Please log in again.'
+
+
+class UserSchema(ma.Schema):
+    id = fields.Integer()
+    username = fields.String()
+    admin = fields.Boolean()
+    registered_on = fields.DateTime('%d-%m-%YT%H:%M:%S')

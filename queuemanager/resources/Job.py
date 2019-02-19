@@ -8,14 +8,15 @@ __status__ = "Development"
 
 import os
 
-from flask import request, json, current_app
+from flask import request, current_app
 from flask_restplus import Resource, Namespace, reqparse
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 from queuemanager.db_manager import DBManagerError, DBInternalError, DBManager, UniqueConstraintError
 from queuemanager.models.Job import JobSchema
+from queuemanager.models.User import User
 from queuemanager.socket.SocketManager import SocketManager
-from queuemanager.utils import GCodeReader
+from queuemanager.utils import GCodeReader, auth
 
 api = Namespace("jobs", description="Jobs related operations")
 
@@ -24,6 +25,9 @@ socket_manager = SocketManager.get_instance()
 
 job_schema = JobSchema()
 jobs_schema = JobSchema(many=True)
+
+header_parser = api.parser()
+header_parser.add_argument("Authorization", type=str, required=True, location="headers", help="Token needed")
 
 
 @api.route("")
@@ -46,6 +50,7 @@ class JobList(Resource):
         return jobs_schema.dump(jobs).data, 200
 
     @api.doc(id="postJob")
+    @api.expect(header_parser)
     @api.param("name", "Job name", "formData", **{"type": str, "required": True})
     @api.param("gcode", "Gcode file", "formData", **{"type": "File", "required": True})
     @api.response(201, "Success")
@@ -54,6 +59,7 @@ class JobList(Resource):
     @api.response(409, "File path already exists")
     @api.response(409, "Job name already exists")
     @api.response(500, "Unable to write the new entry to the database")
+    @auth.requires_auth
     def post(self):
         """
         Register a new job in the database
@@ -68,12 +74,15 @@ class JobList(Resource):
         gcode_name = secure_filename(gcode_file.filename)
         filepath = os.path.join(current_app.config.get('GCODE_STORAGE_PATH'), gcode_name)
 
+        token = request.headers.get("Authorization")
+        user_id = User.decode_auth_token(token)
+
         time, filament, extruders = GCodeReader.get_values(gcode_file)
         if gcode_name.rsplit('.', 1)[1].lower() != 'gcode':
             return {'message': 'The file format must be "gcode"'}, 400
 
         try:
-            job = db.insert_job(job_name, gcode_name, filepath, time, filament, extruders)
+            job = db.insert_job(job_name, gcode_name, filepath, time, filament, extruders, user_id)
             db.commit_changes()
         except UniqueConstraintError as e:
             if "files.name" in str(e):
@@ -128,9 +137,11 @@ class Job(Resource):
         return job_schema.dump(job).data, 200
 
     @api.doc("deleteJob")
+    @api.expect(header_parser)
     @api.response(200, "Success")
     @api.response(404, "Job with id=job_id doesn't exist")
     @api.response(500, "Unable to delete from the database")
+    @auth.requires_auth
     def delete(self, job_id):
         """
         Deletes the job with id=job_id
