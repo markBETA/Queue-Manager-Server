@@ -36,8 +36,8 @@ class User(db.Model):
         """
         try:
             payload = {
-                'exp': datetime.now() + timedelta(days=0, seconds=5),
-                'iat': datetime.now(),
+                'exp': datetime.utcnow() + timedelta(days=0, seconds=5),
+                'iat': datetime.utcnow(),
                 'sub': user_id
             }
             return jwt.encode(
@@ -55,13 +55,8 @@ class User(db.Model):
         :param auth_token:
         :return: integer|string
         """
-        try:
-            payload = jwt.decode(auth_token, current_app.config.get('SECRET_KEY'))
-            return payload['sub']
-        except jwt.ExpiredSignatureError:
-            return 'Signature expired. Please log in again.'
-        except jwt.InvalidTokenError:
-            return 'Invalid token. Please log in again.'
+        payload = jwt.decode(auth_token, current_app.config.get('SECRET_KEY'))
+        return payload['sub']
 
 
 class UserSchema(ma.Schema):
