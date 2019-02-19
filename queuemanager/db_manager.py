@@ -79,7 +79,9 @@ class DBManager(object):
             current_app.logger.error("Can't update the database. Details: %s", str(e))
             raise DBInternalError("Can't update the database")
 
-    # Job Operations
+    ##################
+    # Job Operations #
+    ##################
 
     def insert_job(self, name: str, gcode_name: str, filepath: str, time: int, filament: float, extruders, user_id):
         if name == "" or filepath == "" or gcode_name == "":
@@ -177,7 +179,9 @@ class DBManager(object):
 
         return job
 
-    # Queue operations
+    ####################
+    # Queue operations #
+    ####################
 
     def get_queue_by_id(self, queue_id):
         # Get the print
@@ -225,6 +229,10 @@ class DBManager(object):
 
         if self.autocommit:
             self.commit_changes()
+
+    ###################
+    # User operations #
+    ###################
 
     def insert_user(self, username, password):
         user = User(username=username)
