@@ -5,6 +5,7 @@ from sqlalchemy import func, inspect
 from sqlalchemy.event import listens_for
 from queuemanager.db import db
 from .File import FileSchema
+from .User import UserSchema
 
 ma = Marshmallow()
 
@@ -22,6 +23,7 @@ class Job(db.Model):
     updated_at = db.Column(db.DateTime(), onupdate=datetime.now)
     file_id = db.Column(db.Integer, db.ForeignKey("files.id"))
     queue_id = db.Column(db.Integer, db.ForeignKey("queues.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
 
     def update_helper(self, **kwargs):
         for key, value in kwargs.items():
@@ -36,6 +38,7 @@ class JobSchema(ma.Schema):
     created_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
     updated_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
     file = fields.Nested(FileSchema)
+    user = fields.Nested(UserSchema)
 
 
 @listens_for(Job, "before_insert")

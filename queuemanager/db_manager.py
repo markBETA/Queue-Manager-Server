@@ -20,6 +20,7 @@ from queuemanager.models.Job import Job
 from queuemanager.models.File import File
 from queuemanager.models.Queue import Queue
 from queuemanager.models.Extruder import Extruder
+from queuemanager.models.User import User
 
 
 ######################################
@@ -80,11 +81,11 @@ class DBManager(object):
 
     # Job Operations
 
-    def insert_job(self, name: str, gcode_name: str, filepath: str, time: int, filament: float, extruders):
+    def insert_job(self, name: str, gcode_name: str, filepath: str, time: int, filament: float, extruders, user_id):
         if name == "" or filepath == "" or gcode_name == "":
             raise InvalidParameter("The 'name', the 'gcode_name' and 'filepath' parameter can't be an empty string")
 
-        job = Job(name=name)
+        job = Job(name=name, user_id=user_id)
         file = File(name=gcode_name, path=filepath, time=time, used_material=filament)
         job.file = file
         queue = Queue.query.filter_by(active=True).first()
@@ -224,3 +225,34 @@ class DBManager(object):
 
         if self.autocommit:
             self.commit_changes()
+
+    def insert_user(self, username, password):
+        user = User(username=username)
+        user.hash_password(password)
+
+        # Add the user row
+        db.session.add(user)
+
+        # Commit changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
+        return user
+
+    def get_user(self, user_id):
+        try:
+            user = User.query.get(user_id)
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't retrieve user Details: %s", str(e))
+            raise DBInternalError("Can't retrieve user")
+
+        return user
+
+    def get_user_by_username(self, username):
+        try:
+            user = User.query.filter_by(username=username).first()
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't retrieve user Details: %s", str(e))
+            raise DBInternalError("Can't retrieve user")
+
+        return user

@@ -15,9 +15,11 @@ from flask_restplus import Api
 
 from queuemanager.resources.Job import api as jobs_namespace
 from queuemanager.resources.Queue import api as queues_namespace
+from queuemanager.resources.User import api as users_namespace
 
 # GLOBAL VARIABLES
 api_bp = Blueprint('queuemanagerapi', __name__, url_prefix='/queuemanagerapi')
 api = Api(api_bp, doc="/doc", title="Queue Manager Server", description="Server to manage a queue of jobs to be printed")
 api.add_namespace(jobs_namespace)
 api.add_namespace(queues_namespace)
+api.add_namespace(users_namespace)
