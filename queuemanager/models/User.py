@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from marshmallow import fields
 from flask_marshmallow import Marshmallow
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.event import listens_for
 from queuemanager.db import db
 from flask import current_app
 
@@ -22,6 +23,11 @@ class User(db.Model):
     registered_on = db.Column(db.DateTime, default=datetime.now, nullable=False)
     jobs = db.relationship("Job", backref="user")
 
+    def update_helper(self, **kwargs):
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
     def hash_password(self, password):
         self.password = generate_password_hash(password)
 
@@ -36,7 +42,7 @@ class User(db.Model):
         """
         try:
             payload = {
-                'exp': datetime.utcnow() + timedelta(days=0, seconds=5),
+                'exp': datetime.utcnow() + timedelta(days=0, hours=5),
                 'iat': datetime.utcnow(),
                 'sub': user_id
             }
@@ -57,6 +63,12 @@ class User(db.Model):
         """
         payload = jwt.decode(auth_token, current_app.config.get('SECRET_KEY'))
         return payload['sub']
+
+
+@listens_for(User.__table__, "after_create")
+def insert_initial_values(*args, **kwargs):
+    db.session.add(User(username="admin", password=generate_password_hash("1234"), admin=True))
+    db.session.commit()
 
 
 class UserSchema(ma.Schema):
