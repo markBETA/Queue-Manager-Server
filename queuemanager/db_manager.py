@@ -264,3 +264,31 @@ class DBManager(object):
             raise DBInternalError("Can't retrieve user")
 
         return user
+
+    def get_users(self):
+        try:
+            users = User.query.all()
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't retrieve users Details: %s", str(e))
+            raise DBInternalError("Can't retrieve users")
+
+        return users
+
+    def update_user(self, user_id, **kwargs):
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                return None
+            user.update_helper(**kwargs)
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't update the job with id '%s' Details: %s", user_id, str(e))
+            raise DBInternalError("Can't update the job with id '{}'".format(user_id))
+        except ormexc.UnmappedInstanceError as e:
+            current_app.logger.error("Can.'t update the job with id '%s' Details: %s", user_id, str(e))
+            raise DBInternalError("Can't update the job with id '{}'".format(user_id))
+
+        # Commit changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
+        return user
