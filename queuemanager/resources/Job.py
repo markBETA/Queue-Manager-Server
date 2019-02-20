@@ -7,7 +7,7 @@ __email__ = "epardo@fundaciocim.org"
 __status__ = "Development"
 
 import os
-
+import jwt
 from flask import request, current_app
 from flask_restplus import Resource, Namespace, reqparse
 from werkzeug.datastructures import FileStorage
@@ -75,7 +75,12 @@ class JobList(Resource):
         filepath = os.path.join(current_app.config.get('GCODE_STORAGE_PATH'), gcode_name)
 
         token = request.headers.get("Authorization")
-        user_id = User.decode_auth_token(token)
+        try:
+            user_id = User.decode_auth_token(token)
+        except jwt.ExpiredSignatureError:
+            return "Token has expired", 401
+        except jwt.InvalidTokenError:
+            return "Invalid token", 401
 
         time, filament, extruders = GCodeReader.get_values(gcode_file)
         if gcode_name.rsplit('.', 1)[1].lower() != 'gcode':
@@ -171,6 +176,7 @@ class Job(Resource):
     @api.response(400, "No input data provided")
     @api.response(404, "Job with id=job_id doesn't exist")
     @api.response(500, "Unable to update the database")
+    @auth.requires_admin
     def put(self, job_id):
         """
         Updates the job with id=job_id
