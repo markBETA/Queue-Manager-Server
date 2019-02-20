@@ -170,6 +170,7 @@ class Job(Resource):
         return job_schema.dump(job).data, 200
 
     @api.doc(id="updateJob")
+    @api.expect(header_parser)
     @api.param("name", "Job name", "formData", **{"type": str, "example": "benchy"})
     @api.param("order", "Order", "formData", **{"type": int, "example": 3})
     @api.response(200, "Success")
