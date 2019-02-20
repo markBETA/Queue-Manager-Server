@@ -19,7 +19,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     username = db.Column(db.String(256), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
-    admin = db.Column(db.Boolean, nullable=False, default=False)
+    is_admin = db.Column(db.Boolean, nullable=False, default=False)
     registered_on = db.Column(db.DateTime, default=datetime.now, nullable=False)
     jobs = db.relationship("Job", backref="user")
 
@@ -67,12 +67,12 @@ class User(db.Model):
 
 @listens_for(User.__table__, "after_create")
 def insert_initial_values(*args, **kwargs):
-    db.session.add(User(username="admin", password=generate_password_hash("1234"), admin=True))
+    db.session.add(User(username="admin", password=generate_password_hash("1234"), is_admin=True))
     db.session.commit()
 
 
 class UserSchema(ma.Schema):
     id = fields.Integer()
     username = fields.String()
-    admin = fields.Boolean()
+    is_admin = fields.Boolean()
     registered_on = fields.DateTime('%d-%m-%YT%H:%M:%S')

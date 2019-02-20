@@ -41,7 +41,7 @@ def requires_admin(f):
         if not token or not user_id:
             return "You have to login with proper credentials", 401
         user = db.get_user(user_id)
-        if not user.admin:
+        if not user.is_admin:
             return "You need admin privileges", 401
         return f(*args, **kwargs)
     return decorated
