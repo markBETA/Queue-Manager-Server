@@ -31,16 +31,6 @@ class Job(db.Model):
                 setattr(self, key, value)
 
 
-class JobSchema(ma.Schema):
-    id = fields.Integer()
-    name = fields.String()
-    order = fields.Integer()
-    created_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
-    updated_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
-    file = fields.Nested(FileSchema)
-    user = fields.Nested(UserSchema)
-
-
 @listens_for(Job, "before_insert")
 def calculate_order(mapper, connection, target):
     max_order = db.session.query(func.max(Job.order)).filter(target.queue.id == Job.queue_id).one()[0]
@@ -67,3 +57,13 @@ def handle_order(mapper, connection, target):
 @listens_for(Job, "after_delete")
 def handle_deletion(mapper, connection, target):
     Job.query.filter(target.queue.id == Job.queue_id, Job.order > target.order).update({Job.order: Job.order - 1})
+
+
+class JobSchema(ma.Schema):
+    id = fields.Integer()
+    name = fields.String()
+    order = fields.Integer()
+    created_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
+    updated_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
+    file = fields.Nested(FileSchema)
+    user = fields.Nested(UserSchema)
