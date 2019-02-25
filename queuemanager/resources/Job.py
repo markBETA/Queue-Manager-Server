@@ -106,13 +106,6 @@ class JobList(Resource):
 
         # gcode.save(filepath + '.' + str(job.id))
         gcode_file.save(filepath)
-        # try:
-        #     headers = {'X-Api-Key': 'AAFBCFB524CB4A289B036A434903E47A'}
-        #     files = {'file': (gcode_name, gcode, 'application/octet-stream'), 'print': True}
-        #     r = requests.post('http://localhost:5000/api/files/sdcard', headers=headers, files=files)
-        #     print(r.text)
-        # except Exception as e:
-        #     return {'message': str(e)}, 400
 
         socket_manager.send_queues(**{"broadcast": True})
 
@@ -156,6 +149,7 @@ class Job(Resource):
             if not job:
                 return {"message": "Job with id=%d doesn't exist" % job_id}, 404
             filepath = job.file.path
+            response = job_schema.dump(job).data
             db.commit_changes()
             os.remove(filepath)
         except DBInternalError:
@@ -167,7 +161,7 @@ class Job(Resource):
 
         socket_manager.send_queues(**{"broadcast": True})
 
-        return job_schema.dump(job).data, 200
+        return response, 200
 
     @api.doc(id="updateJob")
     @api.expect(header_parser)
