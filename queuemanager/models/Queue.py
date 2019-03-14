@@ -1,10 +1,10 @@
 from datetime import datetime
 from marshmallow import fields
 from flask_marshmallow import Marshmallow
+from sqlalchemy import func
 from sqlalchemy.event import listens_for
-from sqlalchemy.orm.session import object_session
 from queuemanager.db import db
-from .Job import JobSchema
+from .Job import JobSchema, Job
 from .Extruder import ExtruderSchema
 
 ma = Marshmallow()
@@ -25,7 +25,7 @@ class Queue(db.Model):
     name = db.Column(db.String(256), unique=True, nullable=False)
     active = db.Column(db.Boolean, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
-    updated_at = db.Column(db.DateTime(), onupdate=datetime.now)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.now)
     used_extruders = db.relationship("Extruder", secondary=extruders)
     jobs = db.relationship("Job", backref="queue", order_by="Job.order")
 
@@ -48,8 +48,44 @@ def insert_initial_values(*args, **kwargs):
     db.session.commit()
 
 
-@listens_for(Queue, "after_update")
-def handle_update(mapper, connection, target):
-    if object_session(target).is_modified(target):
-        # TODO handle extruder update
-        pass
+@listens_for(Queue.used_extruders, "bulk_replace")
+def handle_extruders_update(target, values, initiatior):
+    if target.active:
+        jobs_to_waiting_queue = []
+        for job in target.jobs:
+            for extruder in job.file.used_extruders:
+                if extruder not in values:
+                    jobs_to_waiting_queue.append(job)
+                    break
+        for job in jobs_to_waiting_queue:
+            target.jobs.remove(job)
+
+        waiting_queue = Queue.query.filter_by(active=False).first()
+        jobs_to_active_queue = []
+        for job in waiting_queue.jobs:
+            for extruder in job.file.used_extruders:
+                if extruder not in values:
+                    break
+            else:
+                jobs_to_active_queue.append(job)
+        for job in jobs_to_active_queue:
+            waiting_queue.jobs.remove(job)
+
+        waiting_queue.jobs += jobs_to_waiting_queue
+        target.jobs += jobs_to_active_queue
+
+        db.session.commit()
+
+
+@listens_for(Queue.jobs, "append")
+def handle_jobs_append(target, value, initiator):
+    max_order = db.session.query(func.max(Job.order)).filter(target.id == Job.queue_id).one()[0]
+    if max_order is None:
+        value.order = 1
+    else:
+        value.order = max_order + 1
+
+
+@listens_for(Queue.jobs, "remove")
+def handle_jobs_remove(target, value, initiator):
+    Job.query.filter(target.id == Job.queue_id, Job.order > value.order).update({Job.order: Job.order - 1})

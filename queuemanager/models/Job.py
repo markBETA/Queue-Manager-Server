@@ -1,7 +1,7 @@
 from datetime import datetime
 from marshmallow import fields
 from flask_marshmallow import Marshmallow
-from sqlalchemy import func, inspect
+from sqlalchemy.util.langhelpers import symbol
 from sqlalchemy.event import listens_for
 from queuemanager.db import db
 from .File import FileSchema
@@ -19,8 +19,9 @@ class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     name = db.Column(db.String(256), unique=True, nullable=False)
     order = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime(), default=datetime.now, nullable=False)
-    updated_at = db.Column(db.DateTime(), onupdate=datetime.now)
+    printing = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.now)
     file_id = db.Column(db.Integer, db.ForeignKey("files.id"))
     queue_id = db.Column(db.Integer, db.ForeignKey("queues.id"))
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
@@ -31,39 +32,24 @@ class Job(db.Model):
                 setattr(self, key, value)
 
 
-@listens_for(Job, "before_insert")
-def calculate_order(mapper, connection, target):
-    max_order = db.session.query(func.max(Job.order)).filter(target.queue.id == Job.queue_id).one()[0]
-    if max_order is None:
-        target.order = 1
-    else:
-        target.order = max_order + 1
-
-
-@listens_for(Job, "before_update")
-def handle_order(mapper, connection, target):
-    old_order = inspect(target).attrs["order"].history.deleted
-    if len(old_order) == 0:
-        return
-    old_order = old_order[0]
-    if old_order > target.order:
-        Job.query.filter(target.queue.id == Job.queue_id, Job.id != target.id, Job.order >= target.order,
-                         Job.order < old_order).update({Job.order: Job.order + 1})
-    elif old_order < target.order:
-        Job.query.filter(target.queue.id == Job.queue_id, Job.id != target.id, Job.order <= target.order,
-                         Job.order > old_order).update({Job.order: Job.order - 1})
-
-
-@listens_for(Job, "after_delete")
-def handle_deletion(mapper, connection, target):
-    Job.query.filter(target.queue.id == Job.queue_id, Job.order > target.order).update({Job.order: Job.order - 1})
-
-
 class JobSchema(ma.Schema):
     id = fields.Integer()
     name = fields.String()
     order = fields.Integer()
+    printing = fields.Boolean()
     created_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
     updated_at = fields.DateTime('%d-%m-%YT%H:%M:%S')
     file = fields.Nested(FileSchema)
     user = fields.Nested(UserSchema)
+
+
+@listens_for(Job.order, "set")
+def handle_order(target, value, oldvalue, initiator):
+    if oldvalue is symbol("NO_VALUE"):
+        return
+    if oldvalue > value:
+        Job.query.filter(target.queue.id == Job.queue_id, Job.id != target.id, Job.order >= value,
+                                 Job.order < oldvalue).update({Job.order: Job.order + 1})
+    elif oldvalue < target.order:
+        Job.query.filter(target.queue.id == Job.queue_id, Job.id != target.id, Job.order <= value,
+                         Job.order > oldvalue).update({Job.order: Job.order - 1})
