@@ -82,7 +82,7 @@ class User(Resource):
         Returns the user with id=user_id
         """
         try:
-            user = db.get_job(user_id)
+            user = db.get_user(user_id)
             if not user:
                 return {"message": "Job with id=%d doesn't exist" % user_id}, 404
         except DBInternalError:

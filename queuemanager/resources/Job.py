@@ -126,7 +126,7 @@ class Job(Resource):
         Returns the job with id=job_id
         """
         try:
-            job = db.get_job(job_id)
+            job = db.get_job(id=job_id)
             if not job:
                 return {"message": "Job with id=%d doesn't exist" % job_id}, 404
         except DBInternalError:

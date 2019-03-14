@@ -118,16 +118,13 @@ class DBManager(object):
 
         return job
 
-    def get_job(self, job_id):
-        # Get the print
-        if job_id is not None:
-            try:
-                job = Job.query.get(job_id)
-            except exc.SQLAlchemyError as e:
-                current_app.logger.error("Can't retrieve print with id '%s'. Details: %s", job_id, str(e))
-                raise DBInternalError("Can't retrieve print with id '{}'".format(job_id))
-        else:
-            raise InvalidParameter("Job_id can't be None")
+    def get_job(self, **args):
+        # Get the job
+        try:
+            job = Job.query.filter(*args).first()
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't retrieve the job. Details: %s", str(e))
+            raise DBInternalError("Can't retrieve the job")
 
         return job
 
@@ -139,6 +136,28 @@ class DBManager(object):
             raise DBInternalError("Can't retrieve jobs")
 
         return jobs
+
+    def get_next_job(self):
+        try:
+            queue = Queue.query.filter_by(active=True).first()
+            jobs = queue.jobs
+            if jobs:
+                return jobs[0]
+            else:
+                return None
+
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't retrieve queue Details: %s", str(e))
+            raise DBInternalError("Can't retrieve queue")
+
+    def get_printing_job(self):
+        try:
+            job = Job.query.filter_by(printing=True).first()
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't retrieve the printing job. Details: %s", str(e))
+            raise DBInternalError("Can't retrieve the printing job")
+
+        return job
 
     def delete_job(self, job_id):
         try:
@@ -153,6 +172,26 @@ class DBManager(object):
         except ormexc.UnmappedInstanceError as e:
             current_app.logger.error("Can't delete the job with id '%s' Details: %s", job_id, str(e))
             raise DBInternalError("Can't delete the job with id '{}'".format(job_id))
+
+        # Commit changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
+        return job
+
+    def delete_printing_job(self):
+        try:
+            job = Job.query.filter_by(printing=True).first()
+            if not job:
+                return None
+            db.session.delete(job.file)
+            db.session.delete(job)
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't delete the printing job Details: %s", str(e))
+            raise DBInternalError("Can't delete the printing job")
+        except ormexc.UnmappedInstanceError as e:
+            current_app.logger.error("Can't delete the printing job Details: %s", str(e))
+            raise DBInternalError("Can't delete the printing job")
 
         # Commit changes to the database
         if self.autocommit:
@@ -178,6 +217,15 @@ class DBManager(object):
             self.commit_changes()
 
         return job
+
+    def is_job_printing(self):
+        try:
+            printing_job = Job.query.filter_by(printing=True).first()
+        except exc.SQLAlchemyError as e:
+            current_app.logger.error("Can't retrieve if a job is printing Details: %s", str(e))
+            raise DBInternalError("Can't retrieve if a job is printing")
+
+        return printing_job is not None
 
     ####################
     # Queue operations #
@@ -216,16 +264,10 @@ class DBManager(object):
 
     def update_queue(self, printer_info):
         queue = Queue.query.filter_by(name="active").first()
-        if not queue.used_extruders:
-            for key, value in printer_info.items():
-                extruder = Extruder.query.filter_by(index=key, nozzle_diameter=value).first()
-                queue.used_extruders.append(extruder)
-
-        else:
-            new_used_extruders = []
-            for key, value in printer_info.items():
-                new_used_extruders.append(Extruder.query.filter_by(index=key, nozzle_diameter=value).first())
-            queue.used_extruders = new_used_extruders
+        new_used_extruders = []
+        for key, value in printer_info.items():
+            new_used_extruders.append(Extruder.query.filter_by(index=key.split("hed_")[1], nozzle_diameter=value).first())
+        queue.used_extruders = new_used_extruders
 
         if self.autocommit:
             self.commit_changes()

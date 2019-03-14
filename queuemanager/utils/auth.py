@@ -21,7 +21,9 @@ def requires_auth(f):
             return "You have to login with proper credentials", 401
         job_id = kwargs.get("job_id")
         if job_id:
-            job = db.get_job(job_id)
+            job = db.get_job(id=job_id)
+            if not job:
+                return "There is no job with id=%s" % job_id, 401
             if job.user_id != user_id:
                 return "Only the user owner can do this", 401
         return f(*args, **kwargs)
