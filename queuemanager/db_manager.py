@@ -107,11 +107,6 @@ class DBManager(object):
         else:
             queue.jobs.append(job)
 
-        # Add the print row
-        db.session.add(file)
-        db.session.add(job)
-        db.session.add(queue)
-
         # Commit changes to the database
         if self.autocommit:
             self.commit_changes()
@@ -263,7 +258,7 @@ class DBManager(object):
         return queue
 
     def update_queue(self, printer_info):
-        queue = Queue.query.filter_by(name="active").first()
+        queue = Queue.query.filter_by(active=True).first()
         new_used_extruders = []
         for key, value in printer_info.items():
             new_used_extruders.append(Extruder.query.filter_by(index=key.split("hed_")[1], nozzle_diameter=value).first())
