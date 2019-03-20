@@ -71,7 +71,7 @@ class JobList(Resource):
 
         job_name = args["name"]
         gcode_file = args["gcode"]
-        gcode_name = secure_filename(gcode_file.filename)
+        gcode_name = secure_filename(os.path.basename(gcode_file.filename))
         filepath = os.path.join(current_app.config.get('GCODE_STORAGE_PATH'), gcode_name)
 
         token = request.headers.get("Authorization")
