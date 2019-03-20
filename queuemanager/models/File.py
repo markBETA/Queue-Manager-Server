@@ -23,7 +23,7 @@ class File(db.Model):
     loaded_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
     path = db.Column(db.String(256), unique=True, nullable=False)
     time = db.Column(db.Integer)
-    used_extruders = db.relationship("Extruder", secondary=extruders)
+    used_extruders = db.relationship("Extruder", secondary=extruders, order_by="Extruder.index")
     used_material = db.Column(db.Float)
     jobs = db.relationship("Job", backref="file")
 

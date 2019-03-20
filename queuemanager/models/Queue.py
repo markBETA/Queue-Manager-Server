@@ -26,7 +26,7 @@ class Queue(db.Model):
     active = db.Column(db.Boolean, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
     updated_at = db.Column(db.DateTime, onupdate=datetime.now)
-    used_extruders = db.relationship("Extruder", secondary=extruders)
+    used_extruders = db.relationship("Extruder", secondary=extruders, order_by="Extruder.index")
     jobs = db.relationship("Job", backref="queue", order_by="Job.order")
 
 
@@ -53,20 +53,22 @@ def handle_extruders_update(target, values, initiatior):
     if target.active:
         jobs_to_waiting_queue = []
         for job in target.jobs:
-            for extruder in job.file.used_extruders:
-                if extruder not in values:
-                    jobs_to_waiting_queue.append(job)
-                    break
+            # for extruder in job.file.used_extruders:
+            #     if extruder not in values:
+            #         jobs_to_waiting_queue.append(job)
+            #         break
+            if set(job.file.used_extruders) != set(values):
+                jobs_to_waiting_queue.append(job)
         for job in jobs_to_waiting_queue:
             target.jobs.remove(job)
 
         waiting_queue = Queue.query.filter_by(active=False).first()
         jobs_to_active_queue = []
         for job in waiting_queue.jobs:
-            for extruder in job.file.used_extruders:
-                if extruder not in values:
-                    break
-            else:
+            # for extruder in job.file.used_extruders:
+            #     if extruder not in values:
+            #         break
+            if set(job.file.used_extruders) <= set(values):
                 jobs_to_active_queue.append(job)
         for job in jobs_to_active_queue:
             waiting_queue.jobs.remove(job)
