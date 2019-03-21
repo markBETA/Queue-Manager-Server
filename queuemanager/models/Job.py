@@ -45,7 +45,7 @@ class JobSchema(ma.Schema):
 
 @listens_for(Job.order, "set")
 def handle_order(target, value, oldvalue, initiator):
-    if oldvalue is symbol("NO_VALUE"):
+    if oldvalue is symbol("NO_VALUE") or not target.queue:
         return
     if oldvalue > value:
         Job.query.filter(target.queue.id == Job.queue_id, Job.id != target.id, Job.order >= value,

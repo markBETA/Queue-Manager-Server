@@ -53,11 +53,9 @@ def handle_extruders_update(target, values, initiatior):
     if target.active:
         jobs_to_waiting_queue = []
         for job in target.jobs:
-            # for extruder in job.file.used_extruders:
-            #     if extruder not in values:
-            #         jobs_to_waiting_queue.append(job)
-            #         break
-            if set(job.file.used_extruders) != set(values):
+            if set(job.file.used_extruders) <= set(values):
+                continue
+            else:
                 jobs_to_waiting_queue.append(job)
         for job in jobs_to_waiting_queue:
             target.jobs.remove(job)
@@ -65,9 +63,6 @@ def handle_extruders_update(target, values, initiatior):
         waiting_queue = Queue.query.filter_by(active=False).first()
         jobs_to_active_queue = []
         for job in waiting_queue.jobs:
-            # for extruder in job.file.used_extruders:
-            #     if extruder not in values:
-            #         break
             if set(job.file.used_extruders) <= set(values):
                 jobs_to_active_queue.append(job)
         for job in jobs_to_active_queue:
