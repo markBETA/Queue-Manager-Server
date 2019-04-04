@@ -26,6 +26,9 @@ class ClientNamespace(Namespace):
     def emit_jobs_updated(self, data=None, broadcast: bool = False):
         emit("jobs_updated", data, broadcast=broadcast, namespace=self.namespace)
 
+    def emit_job_analyze_done(self, data=None, broadcast: bool = False):
+        emit("job_analyze_done", data, broadcast=broadcast, namespace=self.namespace)
+
     def emit_job_analyze_error(self, data=None, broadcast: bool = False):
         emit("job_analyze_error", data, broadcast=broadcast, namespace=self.namespace)
 
@@ -44,11 +47,11 @@ class ClientNamespace(Namespace):
         try:
             job = db_mgr.get_jobs(id=job_id)
         except DBManagerError as e:
-            self.emit_job_analyze_error(str(e))
+            self.emit_job_analyze_error({"id": job_id, "message": str(e)})
             return
 
         if job is None:
-            self.emit_job_analyze_error("There is no job with this ID in the database")
+            self.emit_job_analyze_error({"id": job_id, "message": "There is no job with this ID in the database"})
             return
 
         try:
@@ -57,12 +60,14 @@ class ClientNamespace(Namespace):
             # Get the job allowed configuration from the file header
             file_mgr.set_job_allowed_config_from_header(job)
         except (MissingHeaderKeys, InvalidFileHeader) as e:
-            self.emit_job_analyze_error(str(e))
+            self.emit_job_analyze_error({"id": job_id, "message": str(e)})
             return
         except DBManagerError:
-            self.emit_job_analyze_error("Can't save the retrieved file header at the database")
+            self.emit_job_analyze_error({"message": "Can't save the retrieved file header at the database",
+                                         "id": job_id})
             return
 
+        self.emit_job_analyze_done(job_id)
         self.emit_jobs_updated(broadcast=True)
 
     def on_enqueue_job(self, job_id: int):
@@ -71,9 +76,11 @@ class ClientNamespace(Namespace):
             if job is not None:
                 db_mgr.enqueue_created_job(job)
             else:
-                self.emit_job_enqueue_error("There is no job with this ID in the database")
+                self.emit_job_enqueue_error({"id": job_id, "message": "There is no job with this ID in the database"})
+                return
         except DBManagerError as e:
-            self.emit_job_enqueue_error(str(e))
+            self.emit_job_enqueue_error({"id": job_id, "message": str(e)})
+            return
 
         self.emit_jobs_updated(broadcast=True)
 
