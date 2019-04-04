@@ -4,47 +4,55 @@ In this package has all needed modules for the mentioned server.
 """
 
 __author__ = "Eloi Pardo"
-__credits__ = ["Eloi Pardo"]
+__credits__ = ["Eloi Pardo", "Marc Bermejo"]
 __license__ = "GPL-3.0"
 __version__ = "0.0.1"
-__maintainer__ = "Eloi Pardo"
-__email__ = "epardo@fundaciocim.org"
+__maintainer__ = "Marc Bermejo"
+__email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-import os
-
-from flask import Flask
-from flask_cors import CORS
-
-from .socket.SocketManager import SocketManager
+from eventlet import monkey_patch
+monkey_patch()
 
 
-def create_app(test_config=None):
+def create_app(name=__name__, override_config=None, init_db_static_values=False):
     """Create and configure an instance of the Flask application."""
-    app = Flask(__name__, instance_relative_config=True)
+    import os
+
+    from flask import Flask
+    app = Flask(name, instance_relative_config=True)
+
+    from flask_cors import CORS
     CORS(app)
 
-    if test_config is None:
-        # load the instance config, if it exists, when not testing
+    if override_config is None:
+        # Load the instance config, if it exists, when not testing
         app.config.from_pyfile('config.py', silent=True)
+        # Ensure the folder to save the GCODEs exists
+        os.makedirs(app.config.get('FILE_MANAGER_UPLOAD_DIR'), exist_ok=True)
     else:
-        # load the test config if passed in
-        app.config.from_mapping(test_config)
+        # Load the test config if passed in
+        app.config.from_mapping(override_config)
 
-    # ensure the instance folder exists
-    os.makedirs(app.instance_path, exist_ok=True)
-    # ensure the folder to save the gcodes exists
-    os.makedirs(app.config.get('GCODE_STORAGE_PATH'), exist_ok=True)
+    # Register the database commands
+    from .database import init_app as db_init_app
+    db_init_app(app)
 
-    # register the database commands
-    from . import db
-    db.init_app(app)
+    from .socketio import socketio
+    socketio.init_app(app)
 
-    SocketManager.get_instance().init_app(app)
+    # Init file manager
+    from .file_storage import file_mgr
+    file_mgr.init_app(app)
 
-    # apply the blueprints to the app
     with app.app_context():
-        from queuemanager.api_resources import api_bp
-        app.register_blueprint(api_bp)
+        if init_db_static_values:
+            # Init the database manager
+            from .database import db_mgr
+            db_mgr.init_static_values()
+
+        # Register the API blueprint
+        from queuemanager.api import api_bp
+        app.register_blueprint(api_bp, url_prefix='/api')
 
     return app

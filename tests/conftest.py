@@ -1,75 +1,100 @@
 import os
-import tempfile
 import pytest
-import shutil
+
 from queuemanager import create_app
-from queuemanager.db import db, init_db
-from queuemanager.models.File import File
-from queuemanager.models.Job import Job
-from queuemanager.models.Queue import Queue
-from queuemanager.models.User import User
-from queuemanager.models.Extruder import Extruder
-from tests.globals import GCODES
+from queuemanager.database import db as _db
+from queuemanager.database import db_mgr
+from queuemanager.file_storage import FileManager
+
+TESTDB = 'test_project.db'
+TESTDB_PATH = "{}".format(TESTDB)
+TEST_DATABASE_URI = 'sqlite:///' + TESTDB_PATH
+GCODE_STORAGE_PATH = './files/'
 
 
-def populate_db(app):
-    queue = Queue.query.filter_by(active=True).first()
-    queue.used_extruders = [Extruder.query.filter_by(index=0, nozzle_diameter=0.6).first(),
-                            Extruder.query.filter_by(index=1, nozzle_diameter=0.6).first()]
-    user = User(username="eloi")
-    user.hash_password("bcn3d")
-    inputs_path = app.config.get("TEST_INPUTS_PATH")
-    output_path = app.config.get("GCODE_STORAGE_PATH")
-    for gcode in GCODES:
-        job_name = gcode["job_name"]
-        file_name = gcode["file_name"]
-        time = gcode["time"]
-        filament = gcode["filament"]
-        extruders = gcode["extruders"]
-        job = Job(name=job_name, user_id=user.id)
-        filepath = os.path.join(output_path, file_name)
-        file = File(name=file_name, path=filepath, time=time, used_material=filament)
-        for index, value in extruders.items():
-            extruder = Extruder.query.filter_by(index=index, nozzle_diameter=value).first()
-            file.used_extruders.append(extruder)
-        job.file = file
-        queue.jobs.append(job)
-        user.jobs.append(job)
-        shutil.copyfile(os.path.join(inputs_path, file_name), os.path.join(output_path, file_name))
-
-    db.session.commit()
-
-
-@pytest.fixture
-def app():
-    db_fd, db_path = tempfile.mkstemp()
-    gcodes_path = tempfile.mkdtemp()
-
-    app = create_app({
+@pytest.fixture(scope='session')
+def app(request):
+    """Session-wide test `Flask` application."""
+    settings_override = {
         'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': 'sqlite:///' + db_path,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///' + TESTDB_PATH,
         'SQLALCHEMY_TRACK_MODIFICATIONS': True,
-        'GCODE_STORAGE_PATH': gcodes_path,
+        'FILE_MANAGER_UPLOAD_DIR': GCODE_STORAGE_PATH,
         'TEST_INPUTS_PATH': 'input',
         'SECRET_KEY': os.getenv('SECRET_KEY', 'my_secret_key')
-    })
+    }
+    app = create_app(__name__, settings_override)
 
-    with app.app_context():
-        init_db()
-        populate_db(app)
+    # Establish an application context before running the tests.
+    ctx = app.app_context()
+    ctx.push()
 
-    yield app
+    def teardown():
+        ctx.pop()
 
-    os.close(db_fd)
-    os.unlink(db_path)
-    shutil.rmtree(gcodes_path)
-
-
-@pytest.fixture
-def client(app):
-    return app.test_client()
+    request.addfinalizer(teardown)
+    return app
 
 
-@pytest.fixture
-def runner(app):
-    return app.test_cli_runner()
+@pytest.fixture(scope='session')
+def db(app, request):
+    """Session-wide test database."""
+    if os.path.exists(TESTDB_PATH):
+        os.unlink(TESTDB_PATH)
+
+    def teardown():
+        _db.drop_all()
+        if os.path.exists(TESTDB_PATH):
+            os.unlink(TESTDB_PATH)
+
+    _db.app = app
+    _db.create_all()
+
+    request.addfinalizer(teardown)
+    return _db
+
+
+@pytest.fixture(scope='function')
+def session(db, request):
+    """Creates a new database session for a test."""
+    connection = db.engine.connect()
+    transaction = connection.begin()
+
+    options = dict(bind=connection, binds={})
+    session = db.create_scoped_session(options=options)
+
+    db.session = session
+
+    def teardown():
+        transaction.rollback()
+        connection.close()
+        session.remove()
+
+    request.addfinalizer(teardown)
+    return session
+
+
+@pytest.fixture(scope='function')
+def db_manager(session):
+    """Creates a new database DBManager instance for a test."""
+    db_mgr.update_session(session)
+    db_mgr.init_static_values()
+
+    return db_mgr
+
+
+@pytest.fixture(scope='function')
+def file_manager(app, db_manager, request):
+    file_manager = FileManager(db_manager, app)
+
+    def teardown():
+        for the_file in os.listdir(app.config['FILE_MANAGER_UPLOAD_DIR']):
+            file_path = os.path.join(app.config['FILE_MANAGER_UPLOAD_DIR'], the_file)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                print(e)
+
+    request.addfinalizer(teardown)
+    return file_manager

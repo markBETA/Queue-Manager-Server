@@ -24,7 +24,9 @@ setup(
         'click',
         'werkzeug',
         'eventlet',
-        'requests'
+        'requests',
+        'flask-jwt-extended',
+        'pymysql'
     ]
 )
 
