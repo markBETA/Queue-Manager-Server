@@ -67,7 +67,7 @@ class ClientNamespace(Namespace):
                                          "id": job_id})
             return
 
-        self.emit_job_analyze_done(job_id)
+        self.emit_job_analyze_done({"id": job.id, "name": job.name})
         self.emit_jobs_updated(broadcast=True)
 
     def on_enqueue_job(self, job_id: int):
