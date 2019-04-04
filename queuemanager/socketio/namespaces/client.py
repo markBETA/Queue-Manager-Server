@@ -32,6 +32,9 @@ class ClientNamespace(Namespace):
     def emit_job_analyze_error(self, data=None, broadcast: bool = False):
         emit("job_analyze_error", data, broadcast=broadcast, namespace=self.namespace)
 
+    def emit_job_enqueue_done(self, data=None, broadcast: bool = False):
+        emit("job_enqueue_done", data, broadcast=broadcast, namespace=self.namespace)
+
     def emit_job_enqueue_error(self, data=None, broadcast: bool = False):
         emit("job_enqueue_error", data, broadcast=broadcast, namespace=self.namespace)
 
@@ -82,6 +85,7 @@ class ClientNamespace(Namespace):
             self.emit_job_enqueue_error({"id": job_id, "message": str(e)})
             return
 
+        self.emit_job_enqueue_done({"id": job.id, "name": job.name})
         self.emit_jobs_updated(broadcast=True)
 
 
