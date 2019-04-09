@@ -11,7 +11,10 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from logging import INFO
+
 from eventlet import monkey_patch
+
 monkey_patch()
 
 
@@ -38,9 +41,6 @@ def create_app(name=__name__, override_config=None, init_db_static_values=False)
     from .database import init_app as db_init_app
     db_init_app(app)
 
-    from .socketio import socketio
-    socketio.init_app(app)
-
     # Init file manager
     from .file_storage import file_mgr
     file_mgr.init_app(app)
@@ -50,9 +50,17 @@ def create_app(name=__name__, override_config=None, init_db_static_values=False)
             # Init the database manager
             from .database import db_mgr
             db_mgr.init_static_values()
+            db_mgr.init_printers_state()
+            db_mgr.init_jobs_can_be_printed()
+
+        # Init the socket.io interface
+        from .socketio import socketio
+        socketio.init_app(app)
 
         # Register the API blueprint
         from queuemanager.api import api_bp
         app.register_blueprint(api_bp, url_prefix='/api')
+
+    app.logger.setLevel(INFO)
 
     return app

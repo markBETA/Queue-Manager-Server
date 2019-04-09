@@ -10,11 +10,11 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from ..models import (
-    add_user, add_file, add_job, add_printer, add_printer_extruders
-)
 from queuemanager.database.models import (
     PrinterMaterial, PrinterExtruderType, PrinterState, Job, job_state_initial_values
+)
+from ..models import (
+    add_user, add_file, add_job, add_printer, add_printer_extruders
 )
 
 
@@ -133,7 +133,7 @@ def test_job_db_manager(db_manager):
     for i in range(4):
         job = db_manager.enqueue_created_job(jobs[i])
         assert job.priority_i == i + 1
-        assert job.state == db_manager._job_waiting_state
+        assert job.state.stateString == "Waiting"
         assert job.canBePrinted == (i == 0)
 
     for printer_extruder in printer_extruders:
@@ -166,7 +166,7 @@ def test_job_db_manager(db_manager):
 
     assert done_job.state.stateString == "Done"
 
-    created_job = db_manager.update_job(done_job, state=db_manager._job_initial_state)
+    created_job = db_manager.update_job(done_job, idState=db_manager.job_state_ids["Created"])
     db_manager.enqueue_created_job(created_job)
 
     expected_queue_order = [jobs[0], jobs[2], jobs[3], jobs[1]]
@@ -193,22 +193,22 @@ def test_job_db_manager(db_manager):
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
     printing_job = db_manager.set_printing_job(db_manager.get_first_job_in_queue())
-    assert printing_job.state == db_manager._job_printing_state
+    assert printing_job.state.stateString == "Printing"
 
     enqueued_job = db_manager.enqueue_printing_or_finished_job(printing_job, max_priority=False)
-    assert enqueued_job.state == db_manager._job_waiting_state
+    assert enqueued_job.state.stateString == "Waiting"
 
     expected_queue_order = [jobs[0], jobs[2], jobs[3], jobs[1]]
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
     printing_job = db_manager.set_printing_job(db_manager.get_first_job_in_queue())
-    assert printing_job.state == db_manager._job_printing_state
+    assert printing_job.state.stateString == "Printing"
 
     expected_queue_order = [jobs[0], jobs[2], jobs[3]]
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
     enqueued_job = db_manager.enqueue_printing_or_finished_job(printing_job, max_priority=True)
-    assert enqueued_job.state == db_manager._job_waiting_state
+    assert enqueued_job.state.stateString == "Waiting"
 
     expected_queue_order = [jobs[1], jobs[0], jobs[2], jobs[3]]
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()

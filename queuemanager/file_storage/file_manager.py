@@ -10,20 +10,22 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+import json
+import math
+import os
+import uuid
+import warnings
+from datetime import timedelta
+
+from flask import current_app
+from werkzeug.utils import secure_filename
+
 from .exceptions import (
     InvalidFileHeader, MissingHeaderKeys, InvalidFileType, FilesystemError, InvalidFileInformation
 )
 from ..database import (
     DBManager, User, File, Job
 )
-from werkzeug.utils import secure_filename
-from datetime import timedelta
-from flask import current_app
-import json
-import warnings
-import os
-import uuid
-import math
 
 
 class FileManager(object):
@@ -49,8 +51,8 @@ class FileManager(object):
         allowed_materials = []
         allowed_extruder_types = []
 
-        for i in range(len(list(file.fileHeader["extruders"]))):
-            extruder = dict(file.fileHeader["extruders"][i])
+        for i in range(len(list(file.fileInformation["extruders"]))):
+            extruder = dict(file.fileInformation["extruders"][i])
             if bool(extruder["active"]):
                 # Get all the materials in the database of this type
                 materials_of_this_type = \
@@ -75,12 +77,12 @@ class FileManager(object):
         fields_to_update = {}
 
         # Get the estimated printing time from the header
-        estimated_printing_time = float(file.fileHeader["print_times"]["total"])
+        estimated_printing_time = float(file.fileInformation["print_times"]["total"])
         fields_to_update["estimatedPrintingTime"] = timedelta(seconds=estimated_printing_time)
 
         # Calculate the estimated needed material for all the extruders
         weight = 0.0
-        for extruder in file.fileHeader["extruders"]:
+        for extruder in file.fileInformation["extruders"]:
             filament_diameter = float(extruder["material"]["diameter"])
             filament_density = float(extruder["material"]["density"])
             extruded_filament_distance = float(extruder["material_used"])
@@ -133,7 +135,7 @@ class FileManager(object):
                 current_app.logger.error("The file header can't be loaded. Details: " + str(e))
                 raise InvalidFileHeader("The file header can't be loaded. Details: " + str(e))
 
-            self.db_manager.update_file(file, fileHeader=file_header)
+            self.db_manager.update_file(file, fileInformation=file_header)
 
     def retrieve_file_info(self, file: File):
         # Open the file for reading
@@ -152,7 +154,7 @@ class FileManager(object):
 
     def set_job_allowed_config_from_header(self, job: Job):
         # Check that the file header is not empty
-        if not job.file.fileHeader:
+        if not job.file.fileInformation:
             current_app.logger.error("Can't read the job allowed config from the file header of the job '" + str(job) +
                                      "'. Details: The file header can't be empty")
             raise InvalidFileHeader("The file header can't be empty")
@@ -176,7 +178,7 @@ class FileManager(object):
 
     def set_file_information_from_header(self, file: File):
         # Check that the file header is not empty
-        if not file.fileHeader:
+        if not file.fileInformation:
             current_app.logger.error("Can't read the file information from the header of the file'" + str(file) +
                                      "'. Details: The file header can't be empty")
             raise InvalidFileHeader("The file header can't be empty")

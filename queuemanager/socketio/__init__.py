@@ -12,6 +12,13 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from .definitions import socketio
-from .namespaces import client_namespace
+from .manager import SocketIOManager
+from .namespaces import ClientNamespace, PrinterNamespace
 
+socketio_mgr = SocketIOManager()
+client_namespace = ClientNamespace(socketio_mgr, "/client")
+printer_namespace = PrinterNamespace(socketio_mgr, "/printer")
+socketio_mgr.set_client_namespace(client_namespace)
+socketio_mgr.set_printer_namespace(printer_namespace)
 socketio.on_namespace(client_namespace)
+socketio.on_namespace(printer_namespace)

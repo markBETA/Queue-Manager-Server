@@ -10,13 +10,14 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from ..definitions import db_conn as db
-from .exceptions import (
-    UniqueConstraintError, DBInternalError
-)
 from flask import current_app
 from sqlalchemy import exc
 from sqlalchemy.orm import Query, scoped_session
+
+from .exceptions import (
+    UniqueConstraintError, DBInternalError
+)
+from ..definitions import db_conn as db
 
 
 class DBManagerBase(object):
@@ -61,7 +62,7 @@ class DBManagerBase(object):
             self.db_session.rollback()
             current_app.logger.error("Can't update the database. Rolling back. Details: %s", str(e))
             raise DBInternalError("Can't update the database")
-        current_app.logger.info("Changes successfully committed to the database")
+        current_app.logger.debug("Changes successfully committed to the database")
 
     def add_row(self, row_obj):
         self.db_session.add(row_obj)

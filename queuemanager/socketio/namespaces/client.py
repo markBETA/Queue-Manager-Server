@@ -10,83 +10,49 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from ...database import db_mgr, DBManagerError
-from ...file_storage import file_mgr
-from ...file_storage.exceptions import (
-    MissingHeaderKeys, InvalidFileHeader
-)
 from flask import current_app, request
 from flask_socketio import Namespace, emit
+
+from ...database import Job
 
 
 class ClientNamespace(Namespace):
     """
     This class defines the client namespace and the events that the server will be listening for.
     """
-    def emit_jobs_updated(self, data=None, broadcast: bool = False):
-        emit("jobs_updated", data, broadcast=broadcast, namespace=self.namespace)
+    def __init__(self, socketio_manager, namespace=None):
+        super().__init__(namespace)
+        self.socketio_manager = socketio_manager
 
-    def emit_job_analyze_done(self, data=None, broadcast: bool = False):
+    def emit_jobs_updated(self, broadcast: bool = False):
+        emit("jobs_updated", broadcast=broadcast, namespace=self.namespace)
+
+    def emit_job_analyze_done(self, job: Job, broadcast: bool = False):
+        data = {"id": job.id, "name": job.name}
         emit("job_analyze_done", data, broadcast=broadcast, namespace=self.namespace)
 
-    def emit_job_analyze_error(self, data=None, broadcast: bool = False):
+    def emit_job_analyze_error(self, job, message, broadcast: bool = False):
+        data = {"job": {"id": job.id, "name": job.name}, "message": message}
         emit("job_analyze_error", data, broadcast=broadcast, namespace=self.namespace)
 
-    def emit_job_enqueue_done(self, data=None, broadcast: bool = False):
+    def emit_job_enqueue_done(self, job, broadcast: bool = False):
+        data = {"id": job.id, "name": job.name}
         emit("job_enqueue_done", data, broadcast=broadcast, namespace=self.namespace)
 
-    def emit_job_enqueue_error(self, data=None, broadcast: bool = False):
+    def emit_job_enqueue_error(self, job, message, broadcast: bool = False):
+        data = {"job": {"id": job.id, "name": job.name}, "message": message}
         emit("job_enqueue_error", data, broadcast=broadcast, namespace=self.namespace)
 
     @staticmethod
     def on_connect():
-        current_app.logger.info("client %s connected", request.sid)
+        current_app.logger.info("Client %s connected", request.sid)
 
     @staticmethod
     def on_disconnect():
-        current_app.logger.info("client %s disconnected", request.sid)
+        current_app.logger.info("Client %s disconnected", request.sid)
 
     def on_analyze_job(self, job_id: int):
-        try:
-            job = db_mgr.get_jobs(id=job_id)
-        except DBManagerError as e:
-            self.emit_job_analyze_error({"id": job_id, "message": str(e)})
-            return
-
-        if job is None:
-            self.emit_job_analyze_error({"id": job_id, "message": "There is no job with this ID in the database"})
-            return
-
-        try:
-            # Retrieve the file header
-            file_mgr.retrieve_file_header(job.file)
-            # Get the job allowed configuration from the file header
-            file_mgr.set_job_allowed_config_from_header(job)
-        except (MissingHeaderKeys, InvalidFileHeader) as e:
-            self.emit_job_analyze_error({"id": job_id, "message": str(e)})
-            return
-        except DBManagerError:
-            self.emit_job_analyze_error({"message": "Can't save the retrieved file header at the database",
-                                         "id": job_id})
-            return
-
-        self.emit_job_analyze_done({"id": job.id, "name": job.name})
-        self.emit_jobs_updated(broadcast=True)
+        self.socketio_manager.analyze_job(job_id)
 
     def on_enqueue_job(self, job_id: int):
-        try:
-            job = db_mgr.get_jobs(id=job_id)
-            if job is not None:
-                db_mgr.enqueue_created_job(job)
-            else:
-                self.emit_job_enqueue_error({"id": job_id, "message": "There is no job with this ID in the database"})
-                return
-        except DBManagerError as e:
-            self.emit_job_enqueue_error({"id": job_id, "message": str(e)})
-            return
-
-        self.emit_job_enqueue_done({"id": job.id, "name": job.name})
-        self.emit_jobs_updated(broadcast=True)
-
-
-client_namespace = ClientNamespace("/client")
+        self.socketio_manager.enqueue_job(job_id)

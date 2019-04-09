@@ -10,13 +10,14 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from ..definitions import db_conn as db
+import uuid
+from datetime import datetime, timedelta
+
 from .table_names import (
     PRINTER_MODELS_TABLE, PRINTER_STATES_TABLE, PRINTER_EXTRUDER_TYPES_TABLE,
     PRINTER_MATERIALS_TABLE, PRINTER_EXTRUDERS_TABLE, PRINTERS_TABLE
 )
-from datetime import datetime, timedelta
-import uuid
+from ..definitions import db_conn as db
 
 
 class PrinterModel(db.Model):
@@ -109,9 +110,9 @@ class PrinterExtruder(db.Model):
     printer = db.relationship('Printer', back_populates='extruders', uselist=False)
 
     def __repr__(self):
-        position = "right" if self.index == 0 else "left"
-        return '[{}]<idPrinter: {} / idExtruderType: {} / idMaterial / index: {}>'.\
-            format(self.__tablename__, self.idPrinter, self.idExtruderType, self.idMaterial, position)
+        # position = "right" if self.index == 0 else "left"
+        return '[{}]<idPrinter: {} / idExtruderType: {} / idMaterial: {} / index: {}>'.\
+            format(self.__tablename__, self.idPrinter, self.idExtruderType, self.idMaterial, self.index)
 
 
 class Printer(db.Model):
@@ -127,6 +128,7 @@ class Printer(db.Model):
     serialNumber = db.Column(db.String(256), unique=True, nullable=False)
     ipAddress = db.Column(db.String(16))
     apiKey = db.Column(db.String(256), default=uuid.uuid4().hex, unique=True, nullable=False)
+    sid = db.Column(db.String(64))
     registeredAt = db.Column(db.DateTime, default=datetime.now, nullable=False)
     totalSuccessPrints = db.Column(db.Integer, nullable=False, default=0)
     totalFailedPrints = db.Column(db.Integer, nullable=False, default=0)

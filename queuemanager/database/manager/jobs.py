@@ -186,19 +186,25 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
     """
     def __init__(self, autocommit: bool = True, override_session: scoped_session = None):
         super().__init__(autocommit, override_session)
-        self._job_initial_state = None
-        self._job_waiting_state = None
-        self._job_printing_state = None
-        self._job_finished_state = None
-        self._job_done_state = None
+        self.job_state_ids = dict()
 
     def init_static_values(self):
-        # Save the job states in memory (for avoid consulting it each time)
-        self._job_initial_state = self.get_job_states(stateString="Created")
-        self._job_waiting_state = self.get_job_states(stateString="Waiting")
-        self._job_printing_state = self.get_job_states(stateString="Printing")
-        self._job_finished_state = self.get_job_states(stateString="Finished")
-        self._job_done_state = self.get_job_states(stateString="Done")
+        for state in self.get_job_states():
+            self.job_state_ids[state.stateString] = state.id
+
+    def init_jobs_can_be_printed(self):
+        # Disable the autocommit (if enabled)
+        self._set_autocommit(False)
+
+        for job in self.get_jobs(idState=self.job_state_ids["Waiting"]):
+            self.update_job(job, canBePrinted=False)
+
+        # Restore the autocommit initial value
+        self._restore_autocommit()
+
+        # Commit the changes to the database
+        if self.autocommit:
+            self.commit_changes()
 
     def _check_can_be_printed_job(self, job: Job):
         # Get all the working printers
@@ -235,7 +241,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
         # Create the new job object
         job = Job(
             name=name,
-            idState=self._job_initial_state.id,
+            idState=self.job_state_ids["Created"],
             idFile=file.id,
             idUser=user.id
         )
@@ -285,7 +291,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
 
     def update_can_be_printed_jobs(self):
         # Get all the jobs in waiting state
-        jobs = self.execute_query(Job.query.filter_by(idState=self._job_waiting_state.id))
+        jobs = self.execute_query(Job.query.filter_by(idState=self.job_state_ids["Waiting"]))
 
         # Disable the autocommit (if enabled)
         self._set_autocommit(False)
@@ -304,7 +310,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
 
     def enqueue_created_job(self, job: Job):
         # Check that the job is in the initial state
-        if job.state.id != self._job_initial_state.id:
+        if job.state.id != self.job_state_ids["Created"]:
             raise InvalidParameter("The job to enqueue needs to be in the initial state ('Created')")
 
         # Check if the job can be printed with the actual printer configuration
@@ -319,50 +325,51 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
         job_priority_i = 1 if lowest_priority_job is None else lowest_priority_job.priority_i + 1
 
         # Update the job priority_i, state and if can be printed
-        self.update_job(job, priority_i=job_priority_i, state=self._job_waiting_state, canBePrinted=can_be_printed)
+        self.update_job(job, priority_i=job_priority_i, idState=self.job_state_ids["Waiting"],
+                        canBePrinted=can_be_printed)
 
         return job
 
     def get_first_job_in_queue(self):
         # Get head of the jobs queue
-        query = Job.query.filter_by(idState=self._job_waiting_state.id).filter_by(canBePrinted=True).\
+        query = Job.query.filter_by(idState=self.job_state_ids["Waiting"]).filter_by(canBePrinted=True).\
             order_by(Job.priority_i.asc())
 
         return self.execute_query(query, use_list=False)
 
     def set_printing_job(self, job: Job):
         # First check if the job can be printed and is in waiting state
-        if not job.canBePrinted or job.state != self._job_waiting_state:
+        if not job.canBePrinted or job.state.id != self.job_state_ids["Waiting"]:
             raise InvalidParameter("This job can't be printed with any printer")
 
         # Update the job state to printing and erase the priority_i of the job
-        self.update_job(job, idState=self._job_printing_state.id, priority_i=None)
+        self.update_job(job, idState=self.job_state_ids["Printing"], priority_i=None)
 
         return job
 
     def set_finished_job(self, job: Job):
         # First check if the job was in 'Printing' state
-        if job.state != self._job_printing_state:
+        if job.state.id != self.job_state_ids["Printing"]:
             raise InvalidParameter("The job needs to be in 'Printing' state to change to 'Finished' state")
 
         # Update the job state to printing and erase the priority_i of the job
-        self.update_job(job, idState=self._job_finished_state.id)
+        self.update_job(job, idState=self.job_state_ids["Finished"])
 
         return job
 
     def set_done_job(self, job: Job):
         # First check if the job was in 'Finished' state
-        if job.state != self._job_finished_state:
+        if job.state.id != self.job_state_ids["Finished"]:
             raise InvalidParameter("The job needs to be in 'Finished' state to change to 'Done' state")
 
         # Update the job state to printing and erase the priority_i of the job
-        self.update_job(job, idState=self._job_done_state.id)
+        self.update_job(job, idState=self.job_state_ids["Done"])
 
         return job
 
     def reorder_job_in_queue(self, job: Job, after: Job):
         # Check that the job is in waiting state
-        if job.state != self._job_waiting_state:
+        if job.state.id != self.job_state_ids["Waiting"]:
             raise InvalidParameter("The job to reorder needs to be in the 'Waiting' state")
 
         # Create the query object
@@ -377,7 +384,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
             # Return the modified job
             return job
         # Check that the after job is in waiting state also
-        elif after.state != self._job_waiting_state:
+        elif after.state.id != self.job_state_ids["Waiting"]:
             raise InvalidParameter("The job to put after needs to be in the 'Waiting' state")
 
         original_priority_i = job.priority_i
@@ -407,7 +414,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
 
     def enqueue_printing_or_finished_job(self, job: Job, max_priority: bool):
         # Check that the job is in the printing or finished state
-        if job.state not in (self._job_printing_state, self._job_finished_state):
+        if job.state.id not in (self.job_state_ids["Printing"], self.job_state_ids["Finished"]):
             raise InvalidParameter("The job to enqueue needs to be in the  state ('Created')")
 
         # Check if the job can be printed with the actual printer configuration
@@ -425,6 +432,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
             job_priority_i = 1 if lowest_priority_job is None else lowest_priority_job.priority_i + 1
 
         # Update the job priority_i, state and if can be printed
-        self.update_job(job, priority_i=job_priority_i, state=self._job_waiting_state, canBePrinted=can_be_printed)
+        self.update_job(job, priority_i=job_priority_i, idState=self.job_state_ids["Waiting"],
+                        canBePrinted=can_be_printed)
 
         return job

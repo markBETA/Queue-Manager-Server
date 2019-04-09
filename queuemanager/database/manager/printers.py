@@ -10,15 +10,18 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from datetime import timedelta
+
+from sqlalchemy.orm import scoped_session
+
 from .base_class import DBManagerBase
+from .exceptions import (
+    InvalidParameter
+)
 from ..models import (
     PrinterModel, PrinterState, PrinterExtruderType, PrinterMaterial, PrinterExtruder,
     Printer
 )
-from .exceptions import (
-    InvalidParameter
-)
-from datetime import timedelta
 
 
 class DBManagerPrinterModels(DBManagerBase):
@@ -150,6 +153,28 @@ class DBManagerPrinters(DBManagerPrinterModels, DBManagerPrinterStates, DBManage
     """
     This class implements the database manager class for the printer extruders operations
     """
+    def __init__(self, autocommit: bool = True, override_session: scoped_session = None):
+        super().__init__(autocommit, override_session)
+        self.printer_state_ids = dict()
+
+    def init_static_values(self):
+        for state in self.get_printer_states():
+            self.printer_state_ids[state.stateString] = state.id
+
+    def init_printers_state(self):
+        # Disable the autocommit (if enabled)
+        self._set_autocommit(False)
+
+        for printer in self.get_printers():
+            self.update_printer(printer, idState=self.printer_state_ids["Offline"])
+
+        # Restore the autocommit initial value
+        self._restore_autocommit()
+
+        # Commit the changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
     def get_printers(self, **kwargs):
         # Create the query object
         query = Printer.query

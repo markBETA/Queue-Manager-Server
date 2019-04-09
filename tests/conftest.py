@@ -1,4 +1,5 @@
 import os
+
 import pytest
 
 from queuemanager import create_app
@@ -79,6 +80,8 @@ def db_manager(session):
     """Creates a new database DBManager instance for a test."""
     db_mgr.update_session(session)
     db_mgr.init_static_values()
+    db_mgr.init_printers_state()
+    db_mgr.init_jobs_can_be_printed()
 
     return db_mgr
 

@@ -10,4 +10,6 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from .client import client_namespace
+from .client import ClientNamespace
+from .printer import PrinterNamespace
+

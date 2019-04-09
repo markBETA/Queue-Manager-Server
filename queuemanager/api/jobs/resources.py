@@ -10,9 +10,12 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from flask import request, current_app
+from flask_restplus import Resource, marshal
+
 from .definitions import api
 from .models import (
-    job_state_model, job_allowed_material_model, job_allowed_extruder_model, job_model
+    job_model
 )
 from ..definitions import prepare_database_filters
 from ...database import db_mgr as db
@@ -23,9 +26,7 @@ from ...file_storage import file_mgr
 from ...file_storage.exceptions import (
     FileManagerError
 )
-from ...socketio import client_namespace
-from flask import request, current_app
-from flask_restplus import Resource, marshal
+from ...socketio import socketio_mgr
 
 
 @api.route("")
@@ -43,7 +44,6 @@ class Jobs(Resource):
     @api.param("order_by_priority", "Get the jobs ordered by the priority index", "query", **{"type": bool})
     @api.response(200, "Success", job_model)
     @api.response(400, "Invalid query parameter")
-    @api.response(404, "No jobs saved in the database")
     @api.response(500, "Unable to read the data from the database")
     def get(self):
         """
@@ -59,12 +59,9 @@ class Jobs(Resource):
         # Get the job state object from the state string set in the query
         if "state" in database_filters:
             try:
-                database_filters["state"] = db.get_job_states(stateString=database_filters["state"])
-            except DBInternalError:
-                return {'message': 'Unable to read the data from the database'}, 500
-            except DBManagerError as e:
-                return {'message': str(e)}, 400
-            if database_filters["state"] is None:
+                database_filters["idState"] = db.job_state_ids[database_filters["state"]]
+                del database_filters["state"]
+            except KeyError:
                 return {'message': 'Unknown state string'}, 400
 
         # Read the 'order_by_priority' param from the query
@@ -79,9 +76,6 @@ class Jobs(Resource):
             return {'message': 'Unable to read the data from the database'}, 500
         except DBManagerError as e:
             return {'message': str(e)}, 400
-
-        if not jobs:
-            return {'message': 'No jobs saved in the database'}, 404
 
         return marshal(jobs, job_model, skip_none=True), 200
 
@@ -134,7 +128,7 @@ class Jobs(Resource):
             else:
                 return {'message': str(e)}, 500
 
-        client_namespace.emit_jobs_updated(broadcast=True)
+        socketio_mgr.client_namespace.emit_jobs_updated(broadcast=True)
 
         return marshal(job, job_model, skip_none=True), 201
 

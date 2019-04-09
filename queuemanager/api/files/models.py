@@ -10,14 +10,16 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from .definitions import api
-from ..definitions import TimeField
 from flask_restplus import fields
 
+from .definitions import api
+from ..definitions import TimeField
 
 ###########################
 # FILE MODELS DECLARATION #
 ###########################
+
+# TODO: Add the file_information field in the file model
 
 file_model = api.model('File', {
     'id': fields.Integer,

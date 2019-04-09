@@ -10,11 +10,12 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from ..definitions import db_conn as db
+from datetime import datetime
+
 from .table_names import (
     FILES_TABLE, USERS_TABLE
 )
-from datetime import datetime
+from ..definitions import db_conn as db
 
 
 class File(db.Model):
@@ -30,7 +31,7 @@ class File(db.Model):
     createdAt = db.Column(db.DateTime, default=datetime.now, nullable=False)
     estimatedPrintingTime = db.Column(db.Interval)
     estimatedNeededMaterial = db.Column(db.Float)
-    fileHeader = db.Column(db.JSON)
+    fileInformation = db.Column(db.JSON)
 
     user = db.relationship('User', back_populates='files', uselist=False)
     jobs = db.relationship('Job', back_populates='file', cascade="all, delete-orphan")

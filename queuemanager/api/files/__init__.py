@@ -11,6 +11,8 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from .definitions import api
-from .models import (
-    file_model
+from .resources import (
+    File
 )
+
+# TODO: Add the method GET /api/files/<file_id>

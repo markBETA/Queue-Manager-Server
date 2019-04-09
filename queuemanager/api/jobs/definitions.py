@@ -13,7 +13,7 @@ __status__ = "Development"
 from flask_restplus import Namespace
 
 NAMESPACE_IDENTIFIER = "jobs"
-NAMESPACE_DESCRIPTION = "Jobs related operations"
+NAMESPACE_DESCRIPTION = "Job related operations"
 
 
 ################################

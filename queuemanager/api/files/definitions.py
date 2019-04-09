@@ -13,7 +13,7 @@ __status__ = "Development"
 from flask_restplus import Namespace
 
 NAMESPACE_IDENTIFIER = "files"
-NAMESPACE_DESCRIPTION = "Files related operations"
+NAMESPACE_DESCRIPTION = "File related operations"
 
 
 ################################
