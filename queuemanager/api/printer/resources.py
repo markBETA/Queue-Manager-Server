@@ -14,12 +14,32 @@ from flask_restplus import Resource, marshal
 
 from .definitions import api
 from .models import (
-    printer_material_model, printer_extruder_type_model
+    printer_material_model, printer_extruder_type_model, printer_model
 )
 from ...database import db_mgr as db
 from ...database.manager.exceptions import (
     DBManagerError
 )
+
+
+@api.route("")
+class PrinterMaterials(Resource):
+    """
+    /printer
+    """
+    @api.doc(id="get_printer")
+    @api.response(200, "Success", printer_model)
+    @api.response(500, "Unable to read the data from the database")
+    def get(self):
+        """
+        Returns the printer data
+        """
+        try:
+            printer = db.get_printers(id=1)
+        except DBManagerError:
+            return {'message': 'Unable to read the data from the database'}, 500
+
+        return marshal(printer, printer_model)
 
 
 @api.route("/materials")

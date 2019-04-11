@@ -10,10 +10,10 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from .definitions import api
-from ..definitions import TimeField
 from flask_restplus import fields
 
+from .definitions import api
+from ..definitions import TimeField
 
 ##############################
 # PRINTER MODELS DECLARATION #
@@ -65,6 +65,7 @@ printer_model = api.model('Printer', {
     'serial_number': fields.String(attribute="serialNumber"),
     'ip_address': fields.String(attribute="ipAddress"),
     'api_key': fields.String(attribute="apiKey"),
+    'sid': fields.String,
     'registered_at': fields.DateTime(attribute="registeredAt"),
     'total_success_prints': fields.Integer(attribute="totalSuccessPrints"),
     'total_failed_prints': fields.Integer(attribute="totalFailedPrints"),
