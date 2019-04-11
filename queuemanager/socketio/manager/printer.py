@@ -152,6 +152,10 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         db_mgr.set_finished_job(job_obj)
         current_app.logger.info("Job '{}' state changed to 'Finished'".format(job_obj))
 
+        # Update the job extruders with the used extruder type and material
+        printer = db_mgr.get_printers(id=1)
+        db_mgr.set_job_used_data_from_printer(job_obj, printer)
+
         self.client_namespace.emit_jobs_updated(broadcast=True)
 
     def print_feedback(self, job_id, feedback_data):

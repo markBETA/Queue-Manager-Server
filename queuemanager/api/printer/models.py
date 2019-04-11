@@ -13,7 +13,7 @@ __status__ = "Development"
 from flask_restplus import fields
 
 from .definitions import api
-from ..definitions import TimeField
+from ..definitions import TimeToSecondsField
 
 ##############################
 # PRINTER MODELS DECLARATION #
@@ -50,7 +50,6 @@ printer_material_model = api.model('PrinterMaterial', {
 })
 
 printer_extruder_model = api.model('PrinterExtruder', {
-    'id': fields.Integer,
     'type': fields.Nested(printer_extruder_type_model),
     'material': fields.Nested(printer_material_model),
     'index': fields.Integer
@@ -64,10 +63,8 @@ printer_model = api.model('Printer', {
     'extruders': fields.Nested(printer_extruder_model, as_list=True),
     'serial_number': fields.String(attribute="serialNumber"),
     'ip_address': fields.String(attribute="ipAddress"),
-    'api_key': fields.String(attribute="apiKey"),
-    'sid': fields.String,
     'registered_at': fields.DateTime(attribute="registeredAt"),
     'total_success_prints': fields.Integer(attribute="totalSuccessPrints"),
     'total_failed_prints': fields.Integer(attribute="totalFailedPrints"),
-    'total_printing_time': TimeField(attribute="totalPrintingTime"),
+    'total_printing_time': TimeToSecondsField(attribute="totalPrintingTime"),
 })
