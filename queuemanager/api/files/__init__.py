@@ -14,5 +14,3 @@ from .definitions import api
 from .resources import (
     File
 )
-
-# TODO: Add the method GET /api/files/<file_id>

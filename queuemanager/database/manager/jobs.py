@@ -17,8 +17,8 @@ from .exceptions import (
     InvalidParameter
 )
 from ..models import (
-    Job, JobState, JobAllowedMaterial, JobAllowedExtruder, User, File, PrinterMaterial,
-    PrinterExtruderType, PrinterState, Printer
+    Job, JobState, JobAllowedMaterial, JobAllowedExtruder, JobExtruder, User, File, PrinterMaterial,
+    PrinterExtruderType, PrinterState, Printer, PrinterExtruder
 )
 
 
@@ -180,7 +180,64 @@ class DBManagerJobAllowedExtruderTypes(DBManagerBase):
         return jobs
 
 
-class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJobAllowedExtruderTypes):
+class DBManagerJobExtruders(DBManagerBase):
+    """
+        This class implements the database manager class for the job states operations
+        """
+
+    def insert_job_extruders(self, job: Job, used_extruder_indexes: list, add_to_database: bool = True):
+        # Initialize the JobExtruder objects list
+        job_extruders = []
+
+        # Create the job extruder objects from the used indexes list
+        for extruder_index in used_extruder_indexes:
+            # Create the JobExtruder object
+            job_extruder = JobExtruder(
+                idJob=job.id,
+                extruderIndex=extruder_index
+            )
+            # Add the object to the database (if specified)
+            if add_to_database:
+                self.add_row(job_extruder)
+            # Add the object to the allowed extruder types list
+            job_extruders.append(job_extruder)
+
+        # Set the job allowed extruders objects
+        job.extruders_data = job_extruders
+
+        # Commit the changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
+        return job_extruders
+
+    def update_job_extruder(self, job_extruder: JobExtruder, **kwargs):
+        # Modify the specified job fields
+        for key, value in kwargs.items():
+            if hasattr(JobExtruder, key):
+                setattr(job_extruder, key, value)
+            else:
+                raise InvalidParameter("Invalid '{}' parameter".format(key))
+
+        # Commit the changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
+        return job_extruder
+
+    def get_job_extruders(self, job: Job, extruder_index: int = None):
+        # Create the query object
+        query = JobExtruder.query.filter_by(idJob=job.id)
+
+        if extruder_index is not None:
+            # Get all the extruders of the job by the extruder index
+            query = query.filter_by(extruderIndex=extruder_index)
+
+        return self.execute_query(query)
+
+
+class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
+                    DBManagerJobAllowedExtruderTypes, DBManagerJobExtruders):
     """
     This class implements the database manager class for the file operations
     """
@@ -326,7 +383,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
 
         # Update the job priority_i, state and if can be printed
         self.update_job(job, priority_i=job_priority_i, idState=self.job_state_ids["Waiting"],
-                        canBePrinted=can_be_printed)
+                        canBePrinted=can_be_printed, retries=0)
 
         return job
 
@@ -357,13 +414,13 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
 
         return job
 
-    def set_done_job(self, job: Job):
+    def set_done_job(self, job: Job, succeed: bool):
         # First check if the job was in 'Finished' state
         if job.state.id != self.job_state_ids["Finished"]:
             raise InvalidParameter("The job needs to be in 'Finished' state to change to 'Done' state")
 
         # Update the job state to printing and erase the priority_i of the job
-        self.update_job(job, idState=self.job_state_ids["Done"])
+        self.update_job(job, idState=self.job_state_ids["Done"], succeed=succeed)
 
         return job
 
@@ -371,6 +428,9 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
         # Check that the job is in waiting state
         if job.state.id != self.job_state_ids["Waiting"]:
             raise InvalidParameter("The job to reorder needs to be in the 'Waiting' state")
+        # Check that the job to move is not the same as de after Job
+        if job == after:
+            raise InvalidParameter("The job to reorder needs to different from the after job")
 
         # Create the query object
         query = Job.query.filter(Job.priority_i.isnot(None))
@@ -387,24 +447,25 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
         elif after.state.id != self.job_state_ids["Waiting"]:
             raise InvalidParameter("The job to put after needs to be in the 'Waiting' state")
 
-        original_priority_i = job.priority_i
+        original_priority_i = int(job.priority_i)
+        after_priority_i = int(after.priority_i)
 
         # Algorithm if the 'after' job priority index is lower than the original one
-        if after.priority_i < original_priority_i:
-            # In this case, the new priority will be the one after the 'after' job
-            job.priority_i = after.priority_i + 1
-            # Update all the jobs between
-            query = query.filter(Job.priority_i > after.priority_i).\
+        if after_priority_i < original_priority_i:
+            # Get all the jobs between and update the priority index
+            query = query.filter(Job.priority_i > after_priority_i).\
                 filter(Job.priority_i < original_priority_i)
             self.execute_update(query, {Job.priority_i: Job.priority_i + 1})
+            # In this case, the new priority will be the one after the 'after' job
+            job.priority_i = after_priority_i + 1
         # Algorithm if the 'after' job priority index is higher than the original one
-        elif after.priority_i > original_priority_i:
-            # In this case, the new priority will be the 'after' job's priority
-            job.priority_i = after.priority_i
-            # Get all the jobs between
-            query = query.filter(Job.priority_i <= after.priority_i). \
+        elif after_priority_i > original_priority_i:
+            # Get all the jobs between and update the priority index
+            query = query.filter(Job.priority_i <= after_priority_i). \
                 filter(Job.priority_i > original_priority_i)
             self.execute_update(query, {Job.priority_i: Job.priority_i - 1})
+            # In this case, the new priority will be the 'after' job's priority
+            job.priority_i = after_priority_i
         else:
             return
 
@@ -433,6 +494,21 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials, DBManagerJ
 
         # Update the job priority_i, state and if can be printed
         self.update_job(job, priority_i=job_priority_i, idState=self.job_state_ids["Waiting"],
-                        canBePrinted=can_be_printed)
+                        canBePrinted=can_be_printed, retries=job.retries + 1)
+
+        return job
+
+    def set_job_used_data_from_printer(self, job: Job, printer: Printer):
+        # Init the printer extruder query
+        printer_extruder_query_base = PrinterExtruder.query.filter_by(idPrinter=printer.id)
+
+        # Iterate over the job extruders data and update the used material and used extruder type from the printer data
+        for job_extruder in job.extruders_data:
+            # Get the printer extruder data for the required index
+            printer_extruder_query = printer_extruder_query_base.filter_by(index=job_extruder.extruderIndex)
+            printer_extruder = self.execute_query(printer_extruder_query, use_list=False)
+            # Update the used material and extruder of the job extruders data
+            self.update_job_extruder(job_extruder, idUsedExtruderType=printer_extruder.type.id,
+                                     idUsedMaterial=printer_extruder.material.id)
 
         return job

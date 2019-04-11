@@ -11,11 +11,11 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+import click
+from flask import current_app
+from flask.cli import with_appcontext
+
 from .definitions import db_conn as db
-from .models import (
-    File, JobState, JobAllowedMaterial, JobAllowedExtruder, Job, PrinterModel, PrinterState,
-    PrinterExtruderType, PrinterMaterial, PrinterExtruder, Printer, User
-)
 from .listeners import (
     printer_material_initial_values, printer_state_initial_values, printer_extruder_type_initial_values,
     printer_model_initial_values, printer_extruder_initial_values, printer_initial_values,
@@ -24,9 +24,10 @@ from .listeners import (
 from .manager import (
     DBManager, DBManagerError, InvalidParameter, DBInternalError, UniqueConstraintError
 )
-from flask import current_app
-from flask.cli import with_appcontext
-import click
+from .models import (
+    File, JobState, JobAllowedMaterial, JobAllowedExtruder, JobExtruder, Job, PrinterModel,
+    PrinterState, PrinterExtruderType, PrinterMaterial, PrinterExtruder, Printer, User
+)
 
 
 ########################

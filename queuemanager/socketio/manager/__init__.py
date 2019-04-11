@@ -15,8 +15,6 @@ from .client import ClientNamespaceManager
 from .printer import PrinterNamespaceManager
 
 
-# TODO: Create the PrinterNamespaceManager
-
 class SocketIOManager(ClientNamespaceManager, PrinterNamespaceManager):
     def __init__(self):
         super(ClientNamespaceManager, self).__init__()

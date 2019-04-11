@@ -14,7 +14,7 @@ from .base_class import SocketIOManagerBase
 from ...database import db_mgr, DBManagerError
 from ...file_storage import file_mgr
 from ...file_storage.exceptions import (
-    MissingHeaderKeys, InvalidFileHeader
+    MissingFileDataKeys, InvalidFileData
 )
 
 
@@ -34,11 +34,14 @@ class ClientNamespaceManager(SocketIOManagerBase):
             return
 
         try:
-            # Retrieve the file header
-            file_mgr.retrieve_file_header(job.file)
-            # Get the job allowed configuration from the file header
-            file_mgr.set_job_allowed_config_from_header(job)
-        except (MissingHeaderKeys, InvalidFileHeader) as e:
+            # Retrieve the file information if needed
+            if not job.file.fileData:
+                file_mgr.retrieve_file_data(job.file)
+            # Get the job allowed configuration from the file data
+            file_mgr.set_job_allowed_config_from_file_data(job)
+            # Get the job estimated needed material per extruder from the file data
+            file_mgr.set_job_estimated_needed_material_from_file_data(job)
+        except (MissingFileDataKeys, InvalidFileData) as e:
             self.client_namespace.emit_job_analyze_error(job, str(e))
             return
         except DBManagerError:

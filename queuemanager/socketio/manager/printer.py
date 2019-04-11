@@ -13,7 +13,6 @@ __status__ = "Development"
 from datetime import timedelta
 
 from flask import current_app
-from flask_socketio import disconnect
 
 from .base_class import SocketIOManagerBase
 from ...database import db_mgr
@@ -36,10 +35,16 @@ class PrinterNamespaceManager(SocketIOManagerBase):
             self.printer_namespace.emit_print_job(job)
 
     def _update_printer_state(self, printer, new_state_str):
-        # Update the state of the printer in the database
+        # Check that the new_state_string is one of the allowed ones
         if new_state_str not in db_mgr.printer_state_ids.keys():
             new_state_str = "Unknown"
 
+        # If the printer came from the 'Offline' state and the new state is not 'Printing' or the new state is 'Error',
+        # enqueue again the Printing job (if any) of this printer
+        if (printer.state.stateString == "Offline" and new_state_str != "Printing") or new_state_str == "Error":
+            self._repair_printing_jobs(new_state_str)
+
+        # Update the printer state in the database
         db_mgr.update_printer(printer, idState=db_mgr.printer_state_ids[new_state_str])
         current_app.logger.info("Printer state changed. New state: {}".format(new_state_str))
 
@@ -59,6 +64,18 @@ class PrinterNamespaceManager(SocketIOManagerBase):
             db_mgr.update_printer_extruder(extruder_obj, **values_to_update)
             current_app.logger.info("Printer extruder information changed. New information: {}".format(extruder_obj))
 
+    def _repair_printing_jobs(self, new_state_str):
+        # Check if there is any print job in Printing state
+        jobs = db_mgr.get_jobs(idState=db_mgr.job_state_ids["Printing"])
+        if jobs:
+            for job in jobs:
+                if new_state_str == "Print finished":
+                    db_mgr.set_finished_job(job)
+                else:
+                    db_mgr.enqueue_printing_or_finished_job(job, max_priority=True)
+                current_app.logger.info("Job {} recovered from a printing error.".format(str(job)))
+            self.client_namespace.emit_jobs_updated(broadcast=True)
+
     def printer_connected(self, sid):
         # Get the printer object
         printer = db_mgr.get_printers(id=1)
@@ -66,10 +83,11 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         # Check that the printer is not connected already
         if printer.state.id != db_mgr.printer_state_ids["Offline"]:
             # If the printer is connected already, reject the new connection
-            disconnect()
+            return False
         else:
             # Set the sid as the printer sid
             db_mgr.update_printer(printer, sid=sid)
+            return True
 
     def printer_disconnected(self, sid):
         # Get the printer object
@@ -79,6 +97,8 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         if printer.sid == sid:
             db_mgr.update_printer(printer, idState=db_mgr.printer_state_ids["Offline"])
             current_app.logger.info("Printer state changed. New state: Offline")
+
+        db_mgr.update_can_be_printed_jobs()
 
     def printer_initial_data(self, state, extruders_info):
         # Get the printer object
@@ -142,7 +162,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         job_obj = db_mgr.get_jobs(id=job_id)
 
         if feedback_data["success"] or feedback_data["max_priority"] is None:
-            db_mgr.set_done_job(job_obj)
+            db_mgr.set_done_job(job_obj, feedback_data["success"])
             current_app.logger.info("Job '{}' state changed to 'Done'".format(job_obj))
         else:
             db_mgr.enqueue_printing_or_finished_job(job_obj, feedback_data["max_priority"])

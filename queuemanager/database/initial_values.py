@@ -10,11 +10,12 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from werkzeug.security import generate_password_hash
+
 from queuemanager.database.models import (
     JobState, PrinterModel, PrinterState, PrinterExtruderType, PrinterMaterial,
     PrinterExtruder, Printer, User
 )
-from werkzeug.security import generate_password_hash
 
 
 #################################

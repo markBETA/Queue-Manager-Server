@@ -11,10 +11,9 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from .file_manager import FileManager
-from ..database import db_mgr
 
 ################
 # FILE MANAGER #
 ################
 
-file_mgr = FileManager(db_mgr)
+file_mgr = FileManager()

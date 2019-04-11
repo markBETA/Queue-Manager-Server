@@ -11,7 +11,7 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from logging import INFO
+from logging import INFO, DEBUG
 
 from eventlet import monkey_patch
 
@@ -61,6 +61,9 @@ def create_app(name=__name__, override_config=None, init_db_static_values=False)
         from queuemanager.api import api_bp
         app.register_blueprint(api_bp, url_prefix='/api')
 
-    app.logger.setLevel(INFO)
+    if app.config.get("DEBUG") > 1:
+        app.logger.setLevel(DEBUG)
+    else:
+        app.logger.setLevel(INFO)
 
     return app

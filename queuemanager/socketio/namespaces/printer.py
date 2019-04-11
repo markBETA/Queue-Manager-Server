@@ -31,8 +31,12 @@ class PrinterNamespace(Namespace):
         emit("print_job", data, broadcast=broadcast, namespace=self.namespace)
 
     def on_connect(self):
-        current_app.logger.info("Printer connected")
-        self.socketio_manager.printer_connected(request.sid)
+        connection_allowed = self.socketio_manager.printer_connected(request.sid)
+        if connection_allowed:
+            current_app.logger.info("Printer connected")
+        else:
+            current_app.logger.info("Printer already connected. New connection rejected")
+        return connection_allowed
 
     def on_disconnect(self):
         current_app.logger.info("Printer disconnected")

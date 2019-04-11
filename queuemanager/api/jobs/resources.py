@@ -111,7 +111,7 @@ class Jobs(Resource):
 
         # Retrieve the file information
         try:
-            file_mgr.retrieve_file_info(file)
+            file_mgr.retrieve_file_basic_info(file)
         except (FileManagerError, DBManagerError):
             current_app.logger.warning("Can't retrieve the file '{}' information".format(file))
 

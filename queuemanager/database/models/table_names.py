@@ -28,8 +28,9 @@ PRINTERS_TABLE = 'printers'
 ##############
 
 JOB_STATES_TABLE = 'job_states'
-JOB_ALLOWED_MATERIALS = 'job_allowed_materials'
-JOB_ALLOWED_EXTRUDERS = 'job_allowed_extruders'
+JOB_ALLOWED_MATERIALS_TABLE = 'job_allowed_materials'
+JOB_ALLOWED_EXTRUDERS_TABLE = 'job_allowed_extruders'
+JOB_EXTRUDERS_TABLE = 'job_extruders'
 JOBS_TABLE = 'jobs'
 
 

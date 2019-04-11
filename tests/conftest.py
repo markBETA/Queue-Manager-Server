@@ -88,7 +88,7 @@ def db_manager(session):
 
 @pytest.fixture(scope='function')
 def file_manager(app, db_manager, request):
-    file_manager = FileManager(db_manager, app)
+    file_manager = FileManager(app)
 
     def teardown():
         for the_file in os.listdir(app.config['FILE_MANAGER_UPLOAD_DIR']):

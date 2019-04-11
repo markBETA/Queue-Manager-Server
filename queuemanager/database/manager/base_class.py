@@ -88,7 +88,10 @@ class DBManagerBase(object):
         try:
             if self._session_object is not None:
                 query = query.with_session(self._session_object)
-            return query.update(values)
+            result = query.update(values)
         except exc.SQLAlchemyError as e:
             current_app.logger.error("Can't execute the requested update query. Details: %s", str(e))
             raise DBInternalError("Can't execute the requested update query")
+
+        current_app.logger.debug("Updates successfully committed to the database")
+        return result

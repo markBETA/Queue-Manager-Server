@@ -11,11 +11,12 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 
-from queuemanager.database.models import (
+from datetime import timedelta
+
+from queuemanager.database.initial_values import (
     printer_model_initial_values, printer_state_initial_values, printer_extruder_type_initial_values,
     printer_material_initial_values, printer_extruder_initial_values, printer_initial_values
 )
-from datetime import timedelta
 
 
 def test_printer_models_db_manager(db_manager):

@@ -31,7 +31,7 @@ class File(db.Model):
     createdAt = db.Column(db.DateTime, default=datetime.now, nullable=False)
     estimatedPrintingTime = db.Column(db.Interval)
     estimatedNeededMaterial = db.Column(db.Float)
-    fileInformation = db.Column(db.JSON)
+    fileData = db.Column(db.JSON)
 
     user = db.relationship('User', back_populates='files', uselist=False)
     jobs = db.relationship('Job', back_populates='file', cascade="all, delete-orphan")

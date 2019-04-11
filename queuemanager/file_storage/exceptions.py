@@ -25,21 +25,21 @@ class InvalidFileType(FileManagerError):
     pass
 
 
-class InvalidFileInformation(FileManagerError):
+class InvalidFileData(FileManagerError):
     """
     This exception represents an invalid information fields of a file.
     """
     pass
 
 
-class InvalidFileHeader(FileManagerError):
+class InvalidFileData(FileManagerError):
     """
     This exception represents an invalid header of a file.
     """
     pass
 
 
-class MissingHeaderKeys(FileManagerError):
+class MissingFileDataKeys(FileManagerError):
     """
     This exception represents when one or more keys of the header are missing
     """
