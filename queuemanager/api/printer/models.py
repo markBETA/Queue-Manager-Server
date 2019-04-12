@@ -66,5 +66,5 @@ printer_model = api.model('Printer', {
     'registered_at': fields.DateTime(attribute="registeredAt"),
     'total_success_prints': fields.Integer(attribute="totalSuccessPrints"),
     'total_failed_prints': fields.Integer(attribute="totalFailedPrints"),
-    'total_printing_time': TimeToSecondsField(attribute="totalPrintingTime"),
+    'total_printing_seconds': TimeToSecondsField(attribute="totalPrintingTime"),
 })

@@ -12,5 +12,5 @@ __status__ = "Development"
 
 from .definitions import api
 from .resources import (
-    PrinterMaterials, PrinterExtruderTypes
+    Printer,  # PrinterMaterials, PrinterExtruderTypes
 )

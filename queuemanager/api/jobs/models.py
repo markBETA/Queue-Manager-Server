@@ -37,8 +37,8 @@ job_allowed_extruder_model = api.model('JobAllowed', {
 })
 
 job_extruder_model = api.model('JobExtruder', {
-    'used_extruder_type': fields.Nested(printer_extruder_type_model),
-    'used_material': fields.Nested(printer_material_model),
+    'used_extruder_type': fields.Nested(printer_extruder_type_model, skip_none=True),
+    'used_material': fields.Nested(printer_material_model, skip_none=True),
     'estimated_needed_material': fields.Float(attribute="estimatedNeededMaterial"),
     'extruder_index': fields.Integer(attribute="extruderIndex")
 })
@@ -55,7 +55,7 @@ job_model = api.model('Job', {
     'state': fields.Nested(job_state_model),
     'file': fields.Nested(file_model),
     'user': fields.Nested(user_model),
-    'allowed_materials': fields.Nested(job_allowed_material_model, as_list=True),
-    'allowed_extruder_types': fields.Nested(job_allowed_extruder_model, as_list=True),
-    'extruders_data': fields.Nested(job_extruder_model, as_list=True)
+    'allowed_materials': fields.Nested(job_allowed_material_model, as_list=True, skip_none=True),
+    'allowed_extruder_types': fields.Nested(job_allowed_extruder_model, as_list=True, skip_none=True),
+    'extruders_data': fields.Nested(job_extruder_model, as_list=True, skip_none=True)
 })

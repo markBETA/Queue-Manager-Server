@@ -51,7 +51,7 @@ def prepare_database_filters(filters: dict, allowed_filters: set):
 
 class TimeToSecondsField(fields.Raw):
     """ This field is used to convert a timedelta object to total_seconds"""
-    __schema_type__ = 'integer'
+    __schema_type__ = 'float'
     __schema_format__ = 'time-seconds'
 
     def format(self, value: timedelta):

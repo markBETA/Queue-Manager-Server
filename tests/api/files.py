@@ -1,7 +1,9 @@
-from queuemanager.api.files import file_model
-from datetime import timedelta
-from flask_restplus import marshal
 import json
+from datetime import timedelta
+
+from flask_restplus import marshal
+
+from queuemanager.api.files import file_model
 
 
 def test_file_model(db_manager):

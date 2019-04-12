@@ -10,8 +10,6 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from datetime import timedelta
-
 from flask import current_app
 
 from .base_class import SocketIOManagerBase
@@ -35,10 +33,6 @@ class PrinterNamespaceManager(SocketIOManagerBase):
             self.printer_namespace.emit_print_job(job)
 
     def _update_printer_state(self, printer, new_state_str):
-        # Check that the new_state_string is one of the allowed ones
-        if new_state_str not in db_mgr.printer_state_ids.keys():
-            new_state_str = "Unknown"
-
         # If the printer came from the 'Offline' state and the new state is not 'Printing' or the new state is 'Error',
         # enqueue again the Printing job (if any) of this printer
         if (printer.state.stateString == "Offline" and new_state_str != "Printing") or new_state_str == "Error":
@@ -48,17 +42,18 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         db_mgr.update_printer(printer, idState=db_mgr.printer_state_ids[new_state_str])
         current_app.logger.info("Printer state changed. New state: {}".format(new_state_str))
 
-    def _update_printer_extruders(self, printer, extruders_info):
+    @staticmethod
+    def _update_printer_extruders(printer, extruders_info):
         for extruder in extruders_info:
             # Init the dictionary of the values to update
             values_to_update = dict()
             # Get the extruder object from the database
             extruder_obj = db_mgr.get_printer_extruders(printer=printer, index=extruder["index"])[0]
 
-            if "material_id" in extruder.keys():
-                values_to_update["idMaterial"] = extruder["material_id"]
-            if "extruder_type_id" in extruder.keys():
-                values_to_update["idExtruderType"] = extruder["extruder_type_id"]
+            if "material" in extruder.keys():
+                values_to_update["material"] = extruder["material"]
+            if "extruder_type" in extruder.keys():
+                values_to_update["type"] = extruder["extruder_type"]
 
             # Update the extruder data
             db_mgr.update_printer_extruder(extruder_obj, **values_to_update)
@@ -73,7 +68,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
                     db_mgr.set_finished_job(job)
                 else:
                     db_mgr.enqueue_printing_or_finished_job(job, max_priority=True)
-                current_app.logger.info("Job {} recovered from a printing error.".format(str(job)))
+                current_app.logger.info("Job {} recovered from a printing disconnection.".format(str(job)))
             self.client_namespace.emit_jobs_updated(broadcast=True)
 
     def printer_connected(self, sid):
@@ -87,6 +82,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         else:
             # Set the sid as the printer sid
             db_mgr.update_printer(printer, sid=sid)
+            self.client_namespace.emit_printer_data_updated(printer, broadcast=True)
             return True
 
     def printer_disconnected(self, sid):
@@ -97,8 +93,9 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         if printer.sid == sid:
             db_mgr.update_printer(printer, idState=db_mgr.printer_state_ids["Offline"])
             current_app.logger.info("Printer state changed. New state: Offline")
-
-        db_mgr.update_can_be_printed_jobs()
+            self.client_namespace.emit_printer_data_updated(printer, broadcast=True)
+            db_mgr.update_can_be_printed_jobs()
+            self.client_namespace.emit_jobs_updated(broadcast=True)
 
     def printer_initial_data(self, state, extruders_info):
         # Get the printer object
@@ -106,22 +103,26 @@ class PrinterNamespaceManager(SocketIOManagerBase):
 
         self._update_printer_state(printer, state)
         self._update_printer_extruders(printer, extruders_info)
+        self.client_namespace.emit_printer_data_updated(printer, broadcast=True)
 
         db_mgr.update_can_be_printed_jobs()
+        self.client_namespace.emit_jobs_updated(broadcast=True)
 
         # If the new state is 'Ready', check if there is any job in the queue and send it to the printer
         if state == "Ready":
             self._check_jobs_in_queue()
 
-    def printer_state_updated(self, new_state_str):
+    def printer_state_updated(self, state):
         # Get the printer object
         printer = db_mgr.get_printers(id=1)
 
-        self._update_printer_state(printer, new_state_str)
+        self._update_printer_state(printer, state)
+        self.client_namespace.emit_printer_data_updated(printer, broadcast=True)
 
         # If the new state is 'Ready', check if there is any job in the queue and send it to the printer
-        if new_state_str == "Ready":
+        if state == "Ready":
             db_mgr.update_can_be_printed_jobs()
+            self.client_namespace.emit_jobs_updated(broadcast=True)
             self._check_jobs_in_queue()
 
     def printer_extruders_updated(self, extruders_info):
@@ -129,9 +130,11 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         printer = db_mgr.get_printers(id=1)
 
         self._update_printer_extruders(printer, extruders_info)
+        self.client_namespace.emit_printer_data_updated(printer, broadcast=True)
 
         # Recheck can be printed jobs and jobs in queue
         db_mgr.update_can_be_printed_jobs()
+        self.client_namespace.emit_jobs_updated(broadcast=True)
         self._check_jobs_in_queue()
 
     def print_started(self, job_id):
@@ -142,6 +145,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         db_mgr.set_printing_job(job_obj)
         current_app.logger.info("Job '{}' state changed to 'Printing'".format(job_obj))
 
+        self.client_namespace.emit_job_started(job_obj, broadcast=True)
         self.client_namespace.emit_jobs_updated(broadcast=True)
 
     def print_finished(self, job_id):
@@ -173,7 +177,23 @@ class PrinterNamespaceManager(SocketIOManagerBase):
             current_app.logger.info("Job '{}' state changed to 'Waiting'".format(job_obj))
 
         # Update the printer statistics
-        printing_time = timedelta(seconds=feedback_data["printing_sec"])
-        db_mgr.add_finished_print(printer, feedback_data["success"], printing_time)
+        db_mgr.add_finished_print(printer, feedback_data["success"], feedback_data["printing_time"])
 
+        self.client_namespace.emit_printer_data_updated(printer, broadcast=True)
+        self.client_namespace.emit_job_done(job_obj, broadcast=True)
         self.client_namespace.emit_jobs_updated(broadcast=True)
+
+    def printer_temperatures_updated(self, bed_temp, extruders_temp):
+        info_str = "New printer temperatures -> bed: {}".format(str(bed_temp))
+        for extruder_temp in extruders_temp:
+            info_str += " / extruder {}: {}".format(extruder_temp["index"], extruder_temp["temp_value"])
+
+        current_app.logger.info(info_str)
+
+        self.client_namespace.emit_printer_temperatures_updated(bed_temp, extruders_temp, broadcast=True)
+
+    def job_progress_updated(self, job_id, progress, estimated_time_left):
+        current_app.logger.info("New printing job (id={}) progress update -> progress: {}% / estimated time left {}".
+                                format(str(job_id), str(progress), str(estimated_time_left)))
+
+        self.client_namespace.emit_job_progress_updated(job_id, progress, estimated_time_left, broadcast=True)

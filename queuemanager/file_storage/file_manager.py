@@ -245,7 +245,7 @@ class FileManager(object):
         # Update the job extruders data
         for estimated_needed_material, index in extruders_estimated_needed_materials:
             # Get the job extruder data for this extruder index
-            job_extruder = db_mgr.get_job_extruders(job, extruder_index=0)
+            job_extruder = db_mgr.get_job_extruders(job, extruder_index=index)
 
             # Check if the job extruder data already exist for this extruder index, if not create it
             if not job_extruder:

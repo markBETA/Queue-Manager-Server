@@ -11,7 +11,7 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from .base_class import SocketIOManagerBase
-from ...database import db_mgr, DBManagerError
+from ...database import Job, db_mgr, DBManagerError
 from ...file_storage import file_mgr
 from ...file_storage.exceptions import (
     MissingFileDataKeys, InvalidFileData
@@ -26,7 +26,7 @@ class ClientNamespaceManager(SocketIOManagerBase):
         try:
             job = db_mgr.get_jobs(id=job_id)
         except DBManagerError as e:
-            self.client_namespace.emit_job_analyze_error(None, str(e))
+            self.client_namespace.emit_job_analyze_error(Job(id=job_id), str(e))
             return
 
         if job is None:
@@ -55,7 +55,7 @@ class ClientNamespaceManager(SocketIOManagerBase):
         try:
             job = db_mgr.get_jobs(id=job_id)
         except DBManagerError as e:
-            self.client_namespace.emit_job_enqueue_error(None, str(e))
+            self.client_namespace.emit_job_enqueue_error(Job(id=job_id), str(e))
             return
 
         if job is None:
