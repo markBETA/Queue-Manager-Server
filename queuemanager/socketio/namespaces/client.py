@@ -186,7 +186,10 @@ class ClientNamespace(Namespace):
         if not deserialized_data.errors:
             self.socketio_manager.analyze_job(**deserialized_data.data)
         else:
-            job = db_mgr.get_jobs(id=deserialized_data.data["job_id"])
+            try:
+                job = db_mgr.get_jobs(id=deserialized_data.data["job_id"])
+            except KeyError:
+                job = None
             self.emit_job_analyze_error(job, "Corrupted event payload", deserialized_data.errors)
 
     def on_enqueue_job(self, data: dict):
@@ -199,5 +202,8 @@ class ClientNamespace(Namespace):
         if not deserialized_data.errors:
             self.socketio_manager.enqueue_job(**deserialized_data.data)
         else:
-            job = db_mgr.get_jobs(id=deserialized_data.data["job_id"])
+            try:
+                job = db_mgr.get_jobs(id=deserialized_data.data["job_id"])
+            except KeyError:
+                job = None
             self.emit_job_enqueue_error(job, "Corrupted event payload", deserialized_data.errors)
