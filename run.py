@@ -16,9 +16,9 @@ from queuemanager import create_app
 
 parser = argparse.ArgumentParser(description='Run the queue manager server')
 parser.add_argument('--host', type=str, default='0.0.0.0',
-                    help='Address where the server is listening for connections')
+                    help='Address where the server is listening for connections (Default: 0.0.0.0)')
 parser.add_argument('--port', type=int, default=5000,
-                    help='Port where the server is listening for connections')
+                    help='Port where the server is listening for connections (Default: 5000)')
 
 
 if __name__ == "__main__":
