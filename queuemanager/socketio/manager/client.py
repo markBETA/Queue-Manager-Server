@@ -82,4 +82,4 @@ class ClientNamespaceManager(SocketIOManagerBase):
         printer = db_mgr.get_printers(id=1)
 
         if len(jobs_in_queue) == 1 and printer.state.stateString == "Ready":
-            self.printer_namespace.emit_print_job(jobs_in_queue[0], broadcast=True)
+            self.assign_job_to_printer(job)

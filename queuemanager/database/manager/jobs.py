@@ -10,6 +10,8 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from datetime import datetime, timedelta
+
 from sqlalchemy.orm import scoped_session
 
 from .base_class import DBManagerBase
@@ -263,32 +265,33 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
         if self.autocommit:
             self.commit_changes()
 
-    def _check_can_be_printed_job(self, job: Job):
+    def check_can_be_printed_job(self, job: Job, return_usable_printers: bool = False):
         # Get all the working printers
         query = Printer.query.join(PrinterState).filter(PrinterState.isOperationalState.is_(True))
-        working_printers = self.execute_query(query)
-        # Initialize the usable printers array
-        usable_printers = [True] * len(working_printers)
+        usable_printers = self.execute_query(query)
 
         # Iterate over the printer extruders of all the working printers
-        for i in range(len(working_printers)):
-            printer = working_printers[i]
+        for i in range(len(usable_printers)):
+            printer = usable_printers[i]
             for extruder in printer.extruders:
                 # Get the allowed materials for this extruder index
                 allowed_materials = self.get_job_allowed_materials(job, extruder_index=extruder.index)
                 # Check that the actual extruder material is in the allowed materials array
                 if allowed_materials and extruder.material not in allowed_materials:
-                    usable_printers[i] = False
+                    del usable_printers[i]
                     break
                 # Get the allowed extruder types for this extruder index
                 allowed_extruder_types = self.get_job_allowed_extruder_types(job, extruder_index=extruder.index)
                 # Check that the actual extruder material is in the allowed materials array
                 if allowed_extruder_types and extruder.type not in allowed_extruder_types:
-                    usable_printers[i] = False
+                    del usable_printers[i]
                     break
 
         # Return True if any of the working printers is usable for this job
-        return any(usable_printers)
+        if return_usable_printers:
+            return usable_printers
+        else:
+            return bool(usable_printers)
 
     def insert_job(self, name: str, file: File, user: User):
         # Check parameter values
@@ -368,7 +371,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
 
         # Recheck if can be printer for all the working jobs
         for job in jobs:
-            can_be_printed = self._check_can_be_printed_job(job)
+            can_be_printed = self.check_can_be_printed_job(job)
             self.update_job(job, canBePrinted=can_be_printed)
 
         # Restore the autocommit initial value
@@ -384,7 +387,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
             raise InvalidParameter("The job to enqueue needs to be in the initial state ('Created')")
 
         # Check if the job can be printed with the actual printer configuration
-        can_be_printed = self._check_can_be_printed_job(job)
+        can_be_printed = self.check_can_be_printed_job(job)
 
         # Get the job with the lowest priority
         query = Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.desc())
@@ -396,7 +399,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
 
         # Update the job priority_i, state and if can be printed
         self.update_job(job, priority_i=job_priority_i, idState=self.job_state_ids["Waiting"],
-                        canBePrinted=can_be_printed, retries=0)
+                        canBePrinted=can_be_printed, retries=0, progress=0.0)
 
         return job
 
@@ -413,17 +416,33 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
             raise InvalidParameter("This job can't be printed with any printer")
 
         # Update the job state to printing and erase the priority_i of the job
-        self.update_job(job, idState=self.job_state_ids["Printing"], priority_i=None)
+        self.update_job(job, idState=self.job_state_ids["Printing"], priority_i=None, startedAt=datetime.now(),
+                        estimatedTimeLeft=job.file.estimatedPrintingTime)
 
         return job
 
     def set_finished_job(self, job: Job):
-        # First check if the job was in 'Printing' state
+        # First check if the job was in 'Printing' state and if the assigned printer is set
         if job.state.id != self.job_state_ids["Printing"]:
             raise InvalidParameter("The job needs to be in 'Printing' state to change to 'Finished' state")
+        if job.assigned_printer is None:
+            raise InvalidParameter("The job needs to have an assigned printer to set it to the 'Finished' state")
 
         # Update the job state to printing and erase the priority_i of the job
-        self.update_job(job, idState=self.job_state_ids["Finished"])
+        self.update_job(job, idState=self.job_state_ids["Finished"], finishedAt=datetime.now(), progress=100.0,
+                        estimatedTimeLeft=timedelta(0))
+
+        # Init the printer extruder query for setting the job used data
+        printer_extruder_query_base = PrinterExtruder.query.filter_by(idPrinter=job.assigned_printer.id)
+
+        # Iterate over the job extruders data and update the used material and used extruder type from the printer data
+        for job_extruder in job.extruders_data:
+            # Get the printer extruder data for the required index
+            printer_extruder_query = printer_extruder_query_base.filter_by(index=job_extruder.extruderIndex)
+            printer_extruder = self.execute_query(printer_extruder_query, use_list=False)
+            # Update the used material and extruder of the job extruders data
+            self.update_job_extruder(job_extruder, idUsedExtruderType=printer_extruder.type.id,
+                                     idUsedMaterial=printer_extruder.material.id)
 
         return job
 
@@ -433,7 +452,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
             raise InvalidParameter("The job needs to be in 'Finished' state to change to 'Done' state")
 
         # Update the job state to printing and erase the priority_i of the job
-        self.update_job(job, idState=self.job_state_ids["Done"], succeed=succeed)
+        self.update_job(job, idState=self.job_state_ids["Done"], succeed=succeed, assigned_printer=None)
 
         return job
 
@@ -492,7 +511,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
             raise InvalidParameter("The job to enqueue needs to be in the  state ('Created')")
 
         # Check if the job can be printed with the actual printer configuration
-        can_be_printed = self._check_can_be_printed_job(job)
+        can_be_printed = self.check_can_be_printed_job(job)
 
         query = Job.query.filter(Job.priority_i.isnot(None))
 
@@ -507,21 +526,11 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
 
         # Update the job priority_i, state and if can be printed
         self.update_job(job, priority_i=job_priority_i, idState=self.job_state_ids["Waiting"],
-                        canBePrinted=can_be_printed, retries=job.retries + 1)
+                        canBePrinted=can_be_printed, retries=job.retries + 1, startedAt=None, finishedAt=None,
+                        assigned_printer=None, progress=0.0, estimatedTimeLeft=None)
 
-        return job
-
-    def set_job_used_data_from_printer(self, job: Job, printer: Printer):
-        # Init the printer extruder query
-        printer_extruder_query_base = PrinterExtruder.query.filter_by(idPrinter=printer.id)
-
-        # Iterate over the job extruders data and update the used material and used extruder type from the printer data
+        # Reset the job used data
         for job_extruder in job.extruders_data:
-            # Get the printer extruder data for the required index
-            printer_extruder_query = printer_extruder_query_base.filter_by(index=job_extruder.extruderIndex)
-            printer_extruder = self.execute_query(printer_extruder_query, use_list=False)
-            # Update the used material and extruder of the job extruders data
-            self.update_job_extruder(job_extruder, idUsedExtruderType=printer_extruder.type.id,
-                                     idUsedMaterial=printer_extruder.material.id)
+            self.update_job_extruder(job_extruder, idUsedExtruderType=None, idUsedMaterial=None)
 
         return job

@@ -10,6 +10,8 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from datetime import datetime, timedelta
+
 from queuemanager.database.initial_values import (
     job_state_initial_values
 )
@@ -189,15 +191,25 @@ def test_job_db_manager(db_manager):
         assert job.canBePrinted == (i == 0)
         assert job.retries == 0
         assert job.analyzed is False
+        assert job.progress == 0.0
 
     first_job_in_queue = db_manager.get_first_job_in_queue()
 
     assert first_job_in_queue == jobs[0]
 
+    assert isinstance(datetime.now(), datetime)
+
+    db_manager.update_job(first_job_in_queue, assigned_printer=printer)
+
+    assert printer.idCurrentJob == first_job_in_queue.id
+
     printing_job = db_manager.set_printing_job(first_job_in_queue)
 
     assert printing_job.state.stateString == "Printing"
     assert printing_job.priority_i is None
+    assert isinstance(printing_job.startedAt, datetime)
+    assert printing_job.assigned_printer == printer
+    assert job.estimatedTimeLeft == job.file.estimatedPrintingTime
 
     first_job_in_queue = db_manager.get_first_job_in_queue()
 
@@ -206,11 +218,20 @@ def test_job_db_manager(db_manager):
     finished_job = db_manager.set_finished_job(printing_job)
 
     assert finished_job.state.stateString == "Finished"
+    assert isinstance(printing_job.startedAt, datetime)
+    assert isinstance(printing_job.finishedAt, datetime)
+    assert printing_job.progress == 100.0
+    assert printing_job.estimatedTimeLeft == timedelta(0)
+    for i in range(len(finished_job.extruders_data)):
+        assert finished_job.extruders_data[i].idUsedExtruderType == 1
+        assert finished_job.extruders_data[i].idUsedMaterial == 1
 
     done_job = db_manager.set_done_job(finished_job, True)
 
     assert done_job.state.stateString == "Done"
     assert done_job.succeed is True
+    assert printing_job.assigned_printer is None
+    assert printer.idCurrentJob is None
 
     not_done_jobs = db_manager.get_not_done_jobs()
 
@@ -224,6 +245,15 @@ def test_job_db_manager(db_manager):
 
     for i in range(5):
         assert jobs[i].canBePrinted == (i == 0 or i == 3 or i == 4)
+
+    can_be_printed = db_manager.check_can_be_printed_job(jobs[0])
+
+    assert can_be_printed is True
+
+    usable_printers = db_manager.check_can_be_printed_job(jobs[0], return_usable_printers=True)
+
+    assert len(usable_printers) == 1
+    assert usable_printers[0].id == printer.id
 
     expected_queue_order = [jobs[1], jobs[2], jobs[3], jobs[4], jobs[0]]
     print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
@@ -254,12 +284,18 @@ def test_job_db_manager(db_manager):
     print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
+    db_manager.update_job(printing_job, assigned_printer=printer)
     printing_job = db_manager.set_printing_job(db_manager.get_first_job_in_queue())
     assert printing_job.state.stateString == "Printing"
+    assert printer.idCurrentJob == printing_job.id
 
     enqueued_job = db_manager.enqueue_printing_or_finished_job(printing_job, max_priority=False)
     assert enqueued_job.state.stateString == "Waiting"
     assert enqueued_job.retries == 1
+    for i in range(len(finished_job.extruders_data)):
+        assert finished_job.extruders_data[i].idUsedExtruderType is None
+        assert finished_job.extruders_data[i].idUsedMaterial is None
+    assert printer.idCurrentJob is None
 
     expected_queue_order = [jobs[1], jobs[3], jobs[4], jobs[2], jobs[0]]
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
@@ -273,12 +309,9 @@ def test_job_db_manager(db_manager):
     enqueued_job = db_manager.enqueue_printing_or_finished_job(printing_job, max_priority=True)
     assert enqueued_job.state.stateString == "Waiting"
     assert enqueued_job.retries == 1
+    assert enqueued_job.startedAt is None
+    assert enqueued_job.finishedAt is None
+    assert enqueued_job.progress == 0.0
 
     expected_queue_order = [jobs[3], jobs[1], jobs[4], jobs[2], jobs[0]]
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
-
-    used_data_set_job = db_manager.set_job_used_data_from_printer(jobs[4], printer)
-
-    for i in range(len(used_data_set_job.extruders_data)):
-        assert used_data_set_job.extruders_data[i].idUsedExtruderType == 4 if i == 0 else 1
-        assert used_data_set_job.extruders_data[i].idUsedMaterial == 4 if i == 0 else 1

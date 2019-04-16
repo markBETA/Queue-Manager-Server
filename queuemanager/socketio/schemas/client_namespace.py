@@ -13,19 +13,10 @@ __status__ = "Development"
 from marshmallow import Schema, fields
 
 from .common_schemas import (
-    PrinterTemperaturesUpdatedSchema, JobProgressUpdatedSchema
+    PrinterTemperaturesUpdatedSchema, JobInfoSchema, CurrentJobInfoSchema
 )
+from .custom_fields import EstimatedSecondsLeft
 from .printer import PrinterSchema
-
-
-##################
-# NESTED SCHEMAS #
-##################
-
-class JobInfoSchema(Schema):
-    """ Schema of the basic job information send to the client """
-    id = fields.Integer(required=True)
-    name = fields.String(required=True)
 
 
 ############################
@@ -66,9 +57,9 @@ class EmitPrinterTemperaturesUpdatedSchema(PrinterTemperaturesUpdatedSchema):
     pass
 
 
-class EmitJobProgressUpdatedSchema(JobProgressUpdatedSchema):
+class EmitJobProgressUpdatedSchema(CurrentJobInfoSchema):
     """ Schema of the 'job_progress_updated' event emitted by the server """
-    pass
+    estimated_seconds_left = EstimatedSecondsLeft(attribute="estimatedTimeLeft", allow_none=True)
 
 
 class EmitJobStartedSchema(JobInfoSchema):

@@ -24,7 +24,9 @@ from ...database import db_mgr
 class PrinterStateField(fields.String):
     """ Custom field for deserialize the printer state field """
     def _deserialize(self, value, attr, data):
-        if value not in db_mgr.printer_state_ids.keys():
+        if value is None:
+            return None
+        elif value not in db_mgr.printer_state_ids.keys():
             value = "Unknown"
         return value
 
@@ -32,7 +34,9 @@ class PrinterStateField(fields.String):
 class PrinterMaterialField(fields.String):
     """ Custom field for deserialize the printer material """
     def _deserialize(self, value, attr, data):
-        if isinstance(value, str):
+        if value is None:
+            return None
+        elif isinstance(value, str):
             materials = db_mgr.get_printer_materials(type=value)
             if materials:
                 return materials[0]
@@ -45,7 +49,9 @@ class PrinterMaterialField(fields.String):
 class PrinterExtruderTypeField(fields.Float):
     """ Custom field for deserialize the printer extruder type """
     def _deserialize(self, value, attr, data):
-        if isinstance(value, float):
+        if value is None:
+            return None
+        elif isinstance(value, float):
             extruder_types = db_mgr.get_printer_extruder_types(nozzleDiameter=value)
             if extruder_types:
                 return extruder_types[0]
@@ -58,21 +64,20 @@ class PrinterExtruderTypeField(fields.Float):
 class PrintingTimeField(fields.Float):
     """ Custom field for serialize and deserialize the printing time """
     def _serialize(self, value, attr, data):
-        if isinstance(value, timedelta):
+        if value is None:
+            return None
+        elif isinstance(value, timedelta):
             return value.total_seconds()
         else:
             self.fail('invalid')
 
     def _deserialize(self, value, attr, data):
-        if isinstance(value, float) or isinstance(value, int):
+        if value is None:
+            return None
+        elif isinstance(value, float) or isinstance(value, int):
             return timedelta(seconds=value)
         else:
             self.fail('invalid')
-
-
-class ElapsedSeconds(PrintingTimeField):
-    """ Custom field for deserialize the estimated printing time left """
-    pass
 
 
 class EstimatedSecondsLeft(PrintingTimeField):

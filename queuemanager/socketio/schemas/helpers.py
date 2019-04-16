@@ -32,10 +32,9 @@ class EmitPrinterTemperaturesUpdatedHelper:
         self.extruders_temp = extruders_temp
 
 
-class EmitJobProgressUpdatedHelper:
-    def __init__(self, job_id, progress, elapsed_time, estimated_time_left):
-        self.job_id = job_id
-        self.progress = progress
-        self.elapsed_time = elapsed_time
-        self.estimated_time_left = estimated_time_left
-
+# class EmitJobProgressUpdatedHelper:
+#     def __init__(self, job, progress, estimated_time_left):
+#         self.id = job.id
+#         self.name = job.name
+#         self.job_progress = job.progress
+#         self.estimated_time_left = estimated_time_left

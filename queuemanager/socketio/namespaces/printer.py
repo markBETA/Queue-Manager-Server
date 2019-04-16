@@ -28,7 +28,7 @@ class PrinterNamespace(Namespace):
         super().__init__(namespace)
         self.socketio_manager = socketio_manager
 
-    def emit_print_job(self, job: Job, broadcast: bool = False):
+    def emit_print_job(self, job: Job, sid: str = None, broadcast: bool = False):
         """
         Emit the event 'print_job'. The data send is defined by
         :class:`EmitPrintJobSchema`
@@ -36,7 +36,7 @@ class PrinterNamespace(Namespace):
         serialized_data = EmitPrintJobSchema().dump(job)
 
         if not serialized_data.errors:
-            emit("print_job", serialized_data.data, broadcast=broadcast, namespace=self.namespace)
+            emit("print_job", serialized_data.data, room=sid, broadcast=broadcast, namespace=self.namespace)
         else:
             # TODO: Send error notification
             pass

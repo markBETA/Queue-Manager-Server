@@ -55,6 +55,14 @@ printer_extruder_model = api.model('PrinterExtruder', {
     'index': fields.Integer
 })
 
+printer_current_job_model = api.model('PrinterCurrentJob', {
+    'id': fields.Integer,
+    'name': fields.String,
+    'file_name': fields.String(attribute="file.name"),
+    'progress': fields.Float,
+    'estimated_seconds_left': TimeToSecondsField(attribute="estimatedTimeLeft"),
+})
+
 printer_model = api.model('Printer', {
     'id': fields.Integer,
     'name': fields.String,
@@ -67,4 +75,5 @@ printer_model = api.model('Printer', {
     'total_success_prints': fields.Integer(attribute="totalSuccessPrints"),
     'total_failed_prints': fields.Integer(attribute="totalFailedPrints"),
     'total_printing_seconds': TimeToSecondsField(attribute="totalPrintingTime"),
+    'current_job': fields.Nested(printer_current_job_model, skip_none=True)
 })

@@ -16,7 +16,7 @@ from queuemanager.socketio.schemas import (
     EmitJobAnalyzeDoneSchema, EmitJobAnalyzeErrorSchema, EmitJobEnqueueDoneSchema, EmitJobEnqueueErrorSchema,
     EmitPrinterDataUpdatedSchema, EmitPrinterTemperaturesUpdatedSchema, EmitJobProgressUpdatedSchema,
     EmitJobStartedSchema, EmitJobDoneSchema, OnAnalyzeJob, OnEnqueueJob, EmitAnalyzeErrorHelper,
-    EmitEnqueueErrorHelper, EmitPrinterTemperaturesUpdatedHelper, EmitJobProgressUpdatedHelper
+    EmitEnqueueErrorHelper, EmitPrinterTemperaturesUpdatedHelper
 )
 
 
@@ -143,7 +143,8 @@ def test_emit_printer_data_updated_schema(db_manager):
         },
         "total_success_prints": 0,
         "serial_number": "020.180622.3180",
-        "id": 1
+        "id": 1,
+        "current_job": None
     }
 
 
@@ -182,17 +183,22 @@ def test_emit_printer_temperatures_updated_schema(db_manager):
 
 
 def test_emit_job_progress_updated_schema(db_manager):
-    helper = EmitJobProgressUpdatedHelper(1, 1.2, timedelta(seconds=10.1), timedelta(seconds=61.1))
-    dump_result = EmitJobProgressUpdatedSchema().dump(helper.__dict__)
+    user = db_manager.get_users(id=1)
+    file = db_manager.insert_file(user, "test-file", "/home/Marc/test")
+    job = db_manager.insert_job("test-job", file, user)
+    job.progress = 1.2
+    job.estimatedTimeLeft = timedelta(seconds=61.1)
+    dump_result = EmitJobProgressUpdatedSchema().dump(job)
 
     assert len(dump_result.errors) == 0
 
     data_to_emit = dump_result.data
 
     assert data_to_emit == {
-        "job_id": 1,
+        "id": 1,
+        "name": "test-job",
+        "file_name": "test-file",
         "progress": 1.2,
-        "elapsed_seconds": 10.1,
         "estimated_seconds_left": 61.1
     }
 

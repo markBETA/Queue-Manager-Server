@@ -12,6 +12,7 @@ __status__ = "Development"
 
 from marshmallow import Schema, fields
 
+from .common_schemas import CurrentJobInfoSchema
 from .custom_fields import TotalPrintingTime
 from ...database import (
     PrinterModel, PrinterState, PrinterExtruderType, PrinterMaterial, PrinterExtruder, Printer
@@ -84,3 +85,4 @@ class PrinterSchema(Schema):
     total_success_prints = fields.Integer(attribute="totalSuccessPrints")
     total_failed_prints = fields.Integer(attribute="totalFailedPrints")
     total_printing_seconds = TotalPrintingTime(attribute="totalPrintingTime")
+    current_job = fields.Nested(CurrentJobInfoSchema, allow_none=True)

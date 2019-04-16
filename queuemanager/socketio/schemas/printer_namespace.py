@@ -13,7 +13,7 @@ __status__ = "Development"
 from marshmallow import Schema, fields
 
 from .common_schemas import (
-    PrinterTemperaturesUpdatedSchema, JobProgressUpdatedSchema
+    PrinterTemperaturesUpdatedSchema, CurrentJobInfoSchema
 )
 from .custom_fields import (
     PrinterStateField, PrinterMaterialField, PrinterExtruderTypeField, PrintingTimeField
@@ -92,6 +92,6 @@ class OnPrinterTemperaturesUpdatedSchema(PrinterTemperaturesUpdatedSchema):
     pass
 
 
-class OnJobProgressUpdatedSchema(JobProgressUpdatedSchema):
+class OnJobProgressUpdatedSchema(CurrentJobInfoSchema):
     """ Schema of the 'printer_temperatures_updated' event that the server is listening for """
     pass

@@ -16,7 +16,7 @@ from .client_namespace import (
     EmitJobStartedSchema, EmitJobDoneSchema, OnAnalyzeJob, OnEnqueueJob
 )
 from .helpers import (
-    EmitAnalyzeErrorHelper, EmitEnqueueErrorHelper, EmitPrinterTemperaturesUpdatedHelper, EmitJobProgressUpdatedHelper,
+    EmitAnalyzeErrorHelper, EmitEnqueueErrorHelper, EmitPrinterTemperaturesUpdatedHelper
 
 )
 from .printer import (
