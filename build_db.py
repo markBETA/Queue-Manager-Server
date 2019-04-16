@@ -11,14 +11,12 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from flask import Flask
-from queuemanager.database import init_app, init_db
 
+from queuemanager.database import init_app, init_db
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///../data/database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ECHO'] = False
+app.config.from_pyfile('instance/config.py')
 
 
 if __name__ == '__main__':
