@@ -96,6 +96,7 @@ def file_manager(app, db_manager, request):
             try:
                 if os.path.isfile(file_path):
                     os.unlink(file_path)
+                    os.rmdir(file_path)
             except Exception as e:
                 print(e)
 

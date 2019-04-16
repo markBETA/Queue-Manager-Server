@@ -150,7 +150,6 @@ class PrinterNamespace(Namespace):
         if not deserialized_data.errors:
             self.socketio_manager.printer_temperatures_updated(**deserialized_data.data)
         else:
-            print(deserialized_data.errors)
             # TODO: Send error notification
             pass
 

@@ -192,8 +192,10 @@ class PrinterNamespaceManager(SocketIOManagerBase):
 
         self.client_namespace.emit_printer_temperatures_updated(bed_temp, extruders_temp, broadcast=True)
 
-    def job_progress_updated(self, job_id, progress, estimated_time_left):
-        current_app.logger.info("New printing job (id={}) progress update -> progress: {}% / estimated time left {}".
-                                format(str(job_id), str(progress), str(estimated_time_left)))
+    def job_progress_updated(self, job_id, progress, elapsed_time, estimated_time_left):
+        current_app.logger.info("New printing job (id={}) progress update -> progress: {}% / elapsed_time: {} "
+                                "/ estimated_time_left: {}".format(str(job_id), str(progress), str(elapsed_time),
+                                                                   str(estimated_time_left)))
 
-        self.client_namespace.emit_job_progress_updated(job_id, progress, estimated_time_left, broadcast=True)
+        self.client_namespace.emit_job_progress_updated(job_id, progress, elapsed_time, estimated_time_left,
+                                                        broadcast=True)

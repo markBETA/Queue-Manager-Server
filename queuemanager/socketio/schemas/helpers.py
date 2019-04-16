@@ -33,8 +33,9 @@ class EmitPrinterTemperaturesUpdatedHelper:
 
 
 class EmitJobProgressUpdatedHelper:
-    def __init__(self, job_id, progress, estimated_time_left):
+    def __init__(self, job_id, progress, elapsed_time, estimated_time_left):
         self.job_id = job_id
         self.progress = progress
+        self.elapsed_time = elapsed_time
         self.estimated_time_left = estimated_time_left
 

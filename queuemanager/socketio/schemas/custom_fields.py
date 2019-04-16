@@ -64,10 +64,15 @@ class PrintingTimeField(fields.Float):
             self.fail('invalid')
 
     def _deserialize(self, value, attr, data):
-        if isinstance(value, float):
+        if isinstance(value, float) or isinstance(value, int):
             return timedelta(seconds=value)
         else:
             self.fail('invalid')
+
+
+class ElapsedSeconds(PrintingTimeField):
+    """ Custom field for deserialize the estimated printing time left """
+    pass
 
 
 class EstimatedSecondsLeft(PrintingTimeField):

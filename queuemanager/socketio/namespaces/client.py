@@ -121,13 +121,13 @@ class ClientNamespace(Namespace):
             # TODO: Send error notification
             pass
 
-    def emit_job_progress_updated(self, job_id: int, progress: float, estimated_time_left: timedelta,
-                                  broadcast: bool = False):
+    def emit_job_progress_updated(self, job_id: int, progress: float, elapsed_time: timedelta,
+                                  estimated_time_left: timedelta, broadcast: bool = False):
         """
         Emit the event 'job_progress_updated'. The data send is defined by
         :class:`EmitJobProgressUpdatedSchema`
         """
-        helper = EmitJobProgressUpdatedHelper(job_id, progress, estimated_time_left)
+        helper = EmitJobProgressUpdatedHelper(job_id, progress, elapsed_time, estimated_time_left)
         serialized_data = EmitJobProgressUpdatedSchema().dump(helper.__dict__)
 
         if not serialized_data.errors:

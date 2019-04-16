@@ -30,7 +30,7 @@ def test_emit_print_job_schema(db_manager):
 
     data_to_emit = dump_result.data
 
-    assert data_to_emit == {"job_id": 1, "file_id": 1}
+    assert data_to_emit == {"id": 1, "name": "test", "file_id": 1}
 
 
 def test_on_initial_data_schema(db_manager):
@@ -368,6 +368,7 @@ def test_on_job_progress_updated_schema(db_manager):
     initial_data = {
         "job_id": 1,
         "progress": 1.2,
+        "elapsed_seconds": 10.1,
         "estimated_seconds_left": 61.1
     }
 
@@ -379,6 +380,7 @@ def test_on_job_progress_updated_schema(db_manager):
 
     assert processed_initial_data["job_id"] == 1
     assert processed_initial_data["progress"] == 1.2
+    assert processed_initial_data["elapsed_time"] == timedelta(seconds=10.1)
     assert processed_initial_data["estimated_time_left"] == timedelta(seconds=61.1)
 
     initial_data["progress"] = "fail"

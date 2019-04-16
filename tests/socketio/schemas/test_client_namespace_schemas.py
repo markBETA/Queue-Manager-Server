@@ -182,7 +182,7 @@ def test_emit_printer_temperatures_updated_schema(db_manager):
 
 
 def test_emit_job_progress_updated_schema(db_manager):
-    helper = EmitJobProgressUpdatedHelper(1, 1.2, timedelta(seconds=61.1))
+    helper = EmitJobProgressUpdatedHelper(1, 1.2, timedelta(seconds=10.1), timedelta(seconds=61.1))
     dump_result = EmitJobProgressUpdatedSchema().dump(helper.__dict__)
 
     assert len(dump_result.errors) == 0
@@ -192,6 +192,7 @@ def test_emit_job_progress_updated_schema(db_manager):
     assert data_to_emit == {
         "job_id": 1,
         "progress": 1.2,
+        "elapsed_seconds": 10.1,
         "estimated_seconds_left": 61.1
     }
 

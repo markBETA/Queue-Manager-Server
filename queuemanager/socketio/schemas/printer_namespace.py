@@ -12,9 +12,11 @@ __status__ = "Development"
 
 from marshmallow import Schema, fields
 
+from .common_schemas import (
+    PrinterTemperaturesUpdatedSchema, JobProgressUpdatedSchema
+)
 from .custom_fields import (
-    PrinterStateField, PrinterMaterialField, PrinterExtruderTypeField, PrintingTimeField,
-    EstimatedSecondsLeft
+    PrinterStateField, PrinterMaterialField, PrinterExtruderTypeField, PrintingTimeField
 )
 
 
@@ -48,8 +50,9 @@ class ExtruderTempSchema(Schema):
 
 class EmitPrintJobSchema(Schema):
     """ Schema of the 'print_job' event emitted by the server """
-    job_id = fields.Integer(attribute="id")
-    file_id = fields.Integer(attribute="file.id")
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    file_id = fields.Integer(attribute="file.id", required=True)
 
 
 class OnInitialDataSchema(Schema):
@@ -84,14 +87,11 @@ class OnPrintFeedbackSchema(Schema):
     feedback_data = fields.Nested(FeedbackDataSchema, required=True)
 
 
-class OnPrinterTemperaturesUpdatedSchema(Schema):
+class OnPrinterTemperaturesUpdatedSchema(PrinterTemperaturesUpdatedSchema):
     """ Schema of the 'printer_temperatures_updated' event that the server is listening for """
-    bed_temp = fields.Float(required=True)
-    extruders_temp = fields.Nested(ExtruderTempSchema, many=True, required=True)
+    pass
 
 
-class OnJobProgressUpdatedSchema(Schema):
+class OnJobProgressUpdatedSchema(JobProgressUpdatedSchema):
     """ Schema of the 'printer_temperatures_updated' event that the server is listening for """
-    job_id = fields.Integer(required=True)
-    progress = fields.Float(required=True)
-    estimated_seconds_left = EstimatedSecondsLeft(attribute="estimated_time_left", required=True)
+    pass

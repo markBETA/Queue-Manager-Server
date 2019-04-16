@@ -212,6 +212,10 @@ def test_job_db_manager(db_manager):
     assert done_job.state.stateString == "Done"
     assert done_job.succeed is True
 
+    not_done_jobs = db_manager.get_not_done_jobs()
+
+    assert set(not_done_jobs) == {jobs[1], jobs[2], jobs[3], jobs[4]}
+
     created_job = db_manager.update_job(done_job, idState=db_manager.job_state_ids["Created"])
     db_manager.enqueue_created_job(created_job)
 

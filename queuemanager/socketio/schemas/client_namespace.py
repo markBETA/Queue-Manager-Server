@@ -12,10 +12,10 @@ __status__ = "Development"
 
 from marshmallow import Schema, fields
 
-from .printer import PrinterSchema
-from .printer_namespace import (
-    OnPrinterTemperaturesUpdatedSchema, OnJobProgressUpdatedSchema,
+from .common_schemas import (
+    PrinterTemperaturesUpdatedSchema, JobProgressUpdatedSchema
 )
+from .printer import PrinterSchema
 
 
 ##################
@@ -61,12 +61,12 @@ class EmitPrinterDataUpdatedSchema(PrinterSchema):
     pass
 
 
-class EmitPrinterTemperaturesUpdatedSchema(OnPrinterTemperaturesUpdatedSchema):
+class EmitPrinterTemperaturesUpdatedSchema(PrinterTemperaturesUpdatedSchema):
     """ Schema of the 'printer_temperatures_updated' event emitted by the server """
     pass
 
 
-class EmitJobProgressUpdatedSchema(OnJobProgressUpdatedSchema):
+class EmitJobProgressUpdatedSchema(JobProgressUpdatedSchema):
     """ Schema of the 'job_progress_updated' event emitted by the server """
     pass
 

@@ -332,6 +332,19 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
         # Return all the filtered items
         return self.execute_query(query)
 
+    def get_not_done_jobs(self, order_by_priority: bool = False):
+        # Create the query object
+        if order_by_priority:
+            query = Job.query.order_by(Job.priority_i.asc())
+        else:
+            query = Job.query
+
+        # Update the query for filtering all the jobs with the done state
+        query = query.join(Job.state).filter(JobState.id != self.job_state_ids["Done"])
+
+        # Return all the filtered items
+        return self.execute_query(query)
+
     def update_job(self, job: Job, **kwargs):
         # Modify the specified job fields
         for key, value in kwargs.items():
