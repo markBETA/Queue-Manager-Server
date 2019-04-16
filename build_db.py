@@ -10,16 +10,17 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from flask import Flask
-
-from queuemanager.database import init_app, init_db
-
-app = Flask(__name__)
-
-app.config.from_pyfile('instance/config.py')
-
+import os
 
 if __name__ == '__main__':
+    os.makedirs('./data', exist_ok=True)
+
+    from flask import Flask
+
+    app = Flask(__name__, instance_relative_config=True)
+    app.config.from_pyfile('config.py', silent=True)
     app.app_context().push()
+
+    from queuemanager.database import init_app, init_db
     init_app(app)
     init_db()

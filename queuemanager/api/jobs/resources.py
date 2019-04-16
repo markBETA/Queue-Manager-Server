@@ -42,7 +42,7 @@ class Jobs(Resource):
     @api.param("name", "Get job with this name", "query", **{"type": str})
     @api.param("can_be_printed", "Get jobs that can be printed or not", "query", **{"type": bool})
     @api.param("order_by_priority", "Get the jobs ordered by the priority index", "query", **{"type": bool})
-    @api.response(200, "Success", job_model)
+    @api.response(200, "Success", [job_model])
     @api.response(400, "Invalid query parameter")
     @api.response(500, "Unable to read the data from the database")
     def get(self):
@@ -133,6 +133,41 @@ class Jobs(Resource):
         return marshal(job, job_model, skip_none=True), 201
 
 
+@api.route("/not_done")
+class NotDoneJobs(Resource):
+    """
+    /jobs/not_done
+    """
+
+    @api.doc(id="get_not_done_jobs")
+    @api.param("order_by_priority", "Get the jobs ordered by the priority index", "query", **{"type": bool})
+    @api.response(200, "Success", [job_model])
+    @api.response(400, "Invalid query parameter")
+    @api.response(500, "Unable to read the data from the database")
+    def get(self):
+        """
+        Returns all jobs in the database after apply the filters set in the query
+        """
+        allowed_filters = {"order_by_priority"}
+
+        try:
+            prepare_database_filters(request.args, allowed_filters=allowed_filters)
+        except KeyError as e:
+            return {'message': str(e)}, 400
+
+        # Read the 'order_by_priority' param from the query
+        order_by_priority = False
+        if "order_by_priority" in request.args:
+            order_by_priority = request.args["order_by_priority"]
+
+        try:
+            jobs = db.get_not_done_jobs(order_by_priority)
+        except DBInternalError:
+            return {'message': 'Unable to read the data from the database'}, 500
+        except DBManagerError as e:
+            return {'message': str(e)}, 400
+
+        return marshal(jobs, job_model, skip_none=True), 200
 #
 #
 # @api.route("/<int:job_id>")
