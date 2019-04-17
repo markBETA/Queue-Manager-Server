@@ -24,9 +24,6 @@ class PrinterNamespaceManager(SocketIOManagerBase):
     """
     This class defines the printer namespace and the events that the server will be listening for.
     """
-    def __init__(self):
-        super().__init__()
-
     def _check_jobs_in_queue(self, printer):
         # Check if there is any job in the queue and send it to the printer
         job = db_mgr.get_first_job_in_queue()
@@ -64,7 +61,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
     def _repair_printing_jobs(self, printer, new_state_str):
         if printer.current_job:
             job = printer.current_job
-            if new_state_str == "Print finished":
+            if new_state_str == "Print finished" and job.stateString == "Printing":
                 db_mgr.set_finished_job(job)
             else:
                 db_mgr.add_finished_print(printer, False, datetime.now() - job.startedAt)
@@ -107,9 +104,11 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         self._update_printer_extruders(printer, extruders_info)
         self.client_namespace.emit_printer_data_updated(printer, broadcast=True)
 
+        if printer.state.isOperationalState:
+            db_mgr.update_can_be_printed_jobs()
+
         # If the new state is 'Ready', check if there is any job in the queue and send it to the printer
         if state == "Ready":
-            db_mgr.update_can_be_printed_jobs()
             self.client_namespace.emit_jobs_updated(broadcast=True)
             self._check_jobs_in_queue(printer)
 
@@ -120,9 +119,11 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         self._update_printer_state(printer, state)
         self.client_namespace.emit_printer_data_updated(printer, broadcast=True)
 
+        if printer.state.isOperationalState:
+            db_mgr.update_can_be_printed_jobs()
+
         # If the new state is 'Ready', check if there is any job in the queue and send it to the printer
         if state == "Ready":
-            db_mgr.update_can_be_printed_jobs()
             self.client_namespace.emit_jobs_updated(broadcast=True)
             self._check_jobs_in_queue(printer)
 
@@ -133,9 +134,11 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         self._update_printer_extruders(printer, extruders_info)
         self.client_namespace.emit_printer_data_updated(printer, broadcast=True)
 
+        if printer.state.isOperationalState:
+            db_mgr.update_can_be_printed_jobs()
+
         # Recheck can be printed jobs and jobs in queue, only if the printer is in ready state
         if printer.state.stateString == "Ready":
-            db_mgr.update_can_be_printed_jobs()
             self.client_namespace.emit_jobs_updated(broadcast=True)
             self._check_jobs_in_queue(printer)
 
@@ -158,6 +161,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         db_mgr.set_finished_job(job_obj)
         current_app.logger.info("Job '{}' state changed to 'Finished'".format(job_obj))
 
+        self.client_namespace.emit_job_progress_updated(job_obj, broadcast=True)
         self.client_namespace.emit_jobs_updated(broadcast=True)
 
     def print_feedback(self, job_id, feedback_data):
@@ -186,7 +190,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         for extruder_temp in extruders_temp:
             info_str += " / extruder {}: {}".format(extruder_temp["index"], extruder_temp["temp_value"])
 
-        current_app.logger.info(info_str)
+        current_app.logger.debug(info_str)
 
         self.client_namespace.emit_printer_temperatures_updated(bed_temp, extruders_temp, broadcast=True)
 
@@ -194,8 +198,8 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         # Get the job object from the database
         job_obj = db_mgr.get_jobs(id=id)
 
-        current_app.logger.info("New printing job (id={}) progress update -> progress: {}% / estimated_time_left: {}".
-                                format(str(id), str(progress), str(estimated_time_left)))
+        current_app.logger.debug("New printing job (id={}) progress update -> progress: {}% / estimated_time_left: {}".
+                                 format(str(id), str(progress), str(estimated_time_left)))
 
         db_mgr.update_job(job_obj, progress=progress, estimatedTimeLeft=estimated_time_left)
 

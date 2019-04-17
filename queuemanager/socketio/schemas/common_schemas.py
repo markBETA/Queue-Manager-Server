@@ -37,13 +37,6 @@ class PrinterTemperaturesUpdatedSchema(Schema):
     extruders_temp = fields.Nested(ExtruderTempSchema, many=True, required=True)
 
 
-# class JobProgressUpdatedSchema(Schema):
-#     """ Schema of the 'printer_temperatures_updated' event that the server is listening for """
-#     job_id = fields.Integer(required=True)
-#     progress = fields.Float(required=True)
-#     estimated_seconds_left = EstimatedSecondsLeft(attribute="estimated_time_left", required=True, allow_none=True)
-
-
 class JobInfoSchema(Schema):
     """ Schema of the basic job information send to the client """
     id = fields.Integer(required=True)

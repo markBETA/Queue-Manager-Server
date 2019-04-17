@@ -37,6 +37,12 @@ def create_app(name=__name__, override_config=None, init_db_static_values=False)
         # Load the test config if passed in
         app.config.from_mapping(override_config)
 
+    # Set the logger level
+    if app.config.get("DEBUG") > 1:
+        app.logger.setLevel(DEBUG)
+    else:
+        app.logger.setLevel(INFO)
+
     # Register the database commands
     from .database import init_app as db_init_app
     db_init_app(app)
@@ -55,15 +61,10 @@ def create_app(name=__name__, override_config=None, init_db_static_values=False)
 
         # Init the socket.io interface
         from .socketio import socketio
-        socketio.init_app(app)
+        socketio.init_app(app, logger=(app.config.get("DEBUG") > 0))
 
         # Register the API blueprint
         from queuemanager.api import api_bp
         app.register_blueprint(api_bp, url_prefix='/api')
-
-    if app.config.get("DEBUG") > 1:
-        app.logger.setLevel(DEBUG)
-    else:
-        app.logger.setLevel(INFO)
 
     return app

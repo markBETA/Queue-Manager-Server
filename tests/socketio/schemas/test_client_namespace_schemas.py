@@ -15,8 +15,7 @@ from datetime import timedelta
 from queuemanager.socketio.schemas import (
     EmitJobAnalyzeDoneSchema, EmitJobAnalyzeErrorSchema, EmitJobEnqueueDoneSchema, EmitJobEnqueueErrorSchema,
     EmitPrinterDataUpdatedSchema, EmitPrinterTemperaturesUpdatedSchema, EmitJobProgressUpdatedSchema,
-    EmitJobStartedSchema, EmitJobDoneSchema, OnAnalyzeJob, OnEnqueueJob, EmitAnalyzeErrorHelper,
-    EmitEnqueueErrorHelper, EmitPrinterTemperaturesUpdatedHelper
+    OnAnalyzeJob, OnEnqueueJob, EmitAnalyzeErrorHelper, EmitEnqueueErrorHelper, EmitPrinterTemperaturesUpdatedHelper
 )
 
 
@@ -201,34 +200,6 @@ def test_emit_job_progress_updated_schema(db_manager):
         "progress": 1.2,
         "estimated_seconds_left": 61.1
     }
-
-
-def test_emit_job_started_schema(db_manager):
-    user = db_manager.get_users(id=1)
-    file = db_manager.insert_file(user, "test", "/home/Marc/test")
-    job = db_manager.insert_job("test", file, user)
-
-    dump_result = EmitJobStartedSchema().dump(job)
-
-    assert len(dump_result.errors) == 0
-
-    data_to_emit = dump_result.data
-
-    assert data_to_emit == {"id": 1, "name": "test"}
-
-
-def test_emit_job_done_schema(db_manager):
-    user = db_manager.get_users(id=1)
-    file = db_manager.insert_file(user, "test", "/home/Marc/test")
-    job = db_manager.insert_job("test", file, user)
-
-    dump_result = EmitJobDoneSchema().dump(job)
-
-    assert len(dump_result.errors) == 0
-
-    data_to_emit = dump_result.data
-
-    assert data_to_emit == {"id": 1, "name": "test"}
 
 
 def test_on_analyze_job_schema(db_manager):

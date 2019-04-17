@@ -17,7 +17,7 @@ from ..schemas import (
     EmitJobAnalyzeDoneSchema, EmitJobAnalyzeErrorSchema, EmitJobEnqueueDoneSchema, EmitJobEnqueueErrorSchema,
     EmitPrinterDataUpdatedSchema, EmitPrinterTemperaturesUpdatedSchema, EmitJobProgressUpdatedSchema,
     OnAnalyzeJob, OnEnqueueJob, EmitAnalyzeErrorHelper, EmitEnqueueErrorHelper,
-    EmitPrinterTemperaturesUpdatedHelper,  # EmitJobProgressUpdatedHelper
+    EmitPrinterTemperaturesUpdatedHelper
 )
 from ...database import Job, Printer, db_mgr
 
@@ -131,32 +131,6 @@ class ClientNamespace(Namespace):
         else:
             # TODO: Send error notification
             pass
-
-    # def emit_job_started(self, job: Job, broadcast: bool = False):
-    #     """
-    #     Emit the event 'job_started'. The data send is defined by
-    #     :class:`EmitJobStartedSchema`
-    #     """
-    #     serialized_data = EmitJobStartedSchema().dump(job)
-    #
-    #     if not serialized_data.errors:
-    #         emit("job_started", serialized_data.data, broadcast=broadcast, namespace=self.namespace)
-    #     else:
-    #         # TODO: Send error notification
-    #         pass
-    #
-    # def emit_job_done(self, job: Job, broadcast: bool = False):
-    #     """
-    #     Emit the event 'job_done'. The data send is defined by
-    #     :class:`EmitJobDoneSchema`
-    #     """
-    #     serialized_data = EmitJobDoneSchema().dump(job)
-    #
-    #     if not serialized_data.errors:
-    #         emit("job_finished", serialized_data.data, broadcast=broadcast, namespace=self.namespace)
-    #     else:
-    #         # TODO: Send error notification
-    #         pass
 
     @staticmethod
     def on_connect():

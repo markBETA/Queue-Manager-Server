@@ -62,16 +62,6 @@ class EmitJobProgressUpdatedSchema(CurrentJobInfoSchema):
     estimated_seconds_left = EstimatedSecondsLeft(attribute="estimatedTimeLeft", allow_none=True)
 
 
-class EmitJobStartedSchema(JobInfoSchema):
-    """ Schema of the 'job_started' event emitted by the server """
-    pass
-
-
-class EmitJobDoneSchema(JobInfoSchema):
-    """ Schema of the 'job_done' event emitted by the server """
-    pass
-
-
 class OnAnalyzeJob(Schema):
     """ Schema of the 'analyze_job' event that the server is listening for """
     job_id = fields.Integer(required=True)

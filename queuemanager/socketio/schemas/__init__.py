@@ -13,7 +13,7 @@ __status__ = "Development"
 from .client_namespace import (
     EmitJobAnalyzeDoneSchema, EmitJobAnalyzeErrorSchema, EmitJobEnqueueDoneSchema, EmitJobEnqueueErrorSchema,
     EmitPrinterDataUpdatedSchema, EmitPrinterTemperaturesUpdatedSchema, EmitJobProgressUpdatedSchema,
-    EmitJobStartedSchema, EmitJobDoneSchema, OnAnalyzeJob, OnEnqueueJob
+    OnAnalyzeJob, OnEnqueueJob
 )
 from .helpers import (
     EmitAnalyzeErrorHelper, EmitEnqueueErrorHelper, EmitPrinterTemperaturesUpdatedHelper
