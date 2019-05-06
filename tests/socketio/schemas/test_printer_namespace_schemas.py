@@ -14,8 +14,9 @@ __status__ = "Development"
 from datetime import timedelta
 
 from queuemanager.socketio.schemas import (
-    EmitPrintJobSchema, OnInitialDataSchema, OnStateUpdatedSchema, OnExtrudersUpdatedSchema, OnPrintStartedSchema,
-    OnPrintFinishedSchema, OnPrintFeedbackSchema, OnPrinterTemperaturesUpdatedSchema, OnJobProgressUpdatedSchema
+    EmitPrintJobSchema, EmitJobRecoveredSchema, OnInitialDataSchema, OnStateUpdatedSchema, OnExtrudersUpdatedSchema,
+    OnPrintStartedSchema, OnPrintFinishedSchema, OnPrintFeedbackSchema, OnPrinterTemperaturesUpdatedSchema,
+    OnJobProgressUpdatedSchema
 )
 
 
@@ -31,6 +32,35 @@ def test_emit_print_job_schema(db_manager):
     data_to_emit = dump_result.data
 
     assert data_to_emit == {"id": 1, "name": "test", "file_id": 1}
+
+
+def test_emit_job_recovered_schema(db_manager):
+    user = db_manager.get_users(id=1)
+    file = db_manager.insert_file(user, "test", "/home/Marc/test")
+    job = db_manager.insert_job("test", file, user)
+    printer = db_manager.get_printers(id=1)
+    db_manager.enqueue_created_job(job)
+    db_manager.update_job(job, canBePrinted=True)
+    db_manager.assign_job_to_printer(printer, job)
+    db_manager.set_printing_job(job)
+
+    dump_result = EmitJobRecoveredSchema().dump(job)
+
+    assert len(dump_result.errors) == 0
+
+    data_to_emit = dump_result.data
+
+    for k, v in data_to_emit.items():
+        if k == "id":
+            assert v == 1
+        elif k == "name":
+            assert v == "test"
+        elif k == "started_at":
+            assert isinstance(v, str)
+        elif k == "interrupted":
+            assert v is False
+        else:
+            assert False
 
 
 def test_on_initial_data_schema(db_manager):
@@ -250,6 +280,7 @@ def test_on_print_started(db_manager):
 def test_on_print_finished(db_manager):
     initial_data = {
         "job_id": 1,
+        "cancelled": True,
     }
 
     load_result = OnPrintFinishedSchema().load(initial_data)
@@ -259,6 +290,7 @@ def test_on_print_finished(db_manager):
     processed_initial_data = load_result.data
 
     assert processed_initial_data["job_id"] == 1
+    assert processed_initial_data["cancelled"] is True
 
     initial_data["job_id"] = "fail"
 

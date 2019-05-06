@@ -16,7 +16,7 @@ from .common_schemas import (
     PrinterTemperaturesUpdatedSchema, CurrentJobInfoSchema
 )
 from .custom_fields import (
-    PrinterStateField, PrinterMaterialField, PrinterExtruderTypeField, PrintingTimeField
+    PrinterStateField, PrinterMaterialField, PrinterExtruderTypeField, PrintingTimeField, EstimatedSecondsLeft
 )
 
 
@@ -55,6 +55,14 @@ class EmitPrintJobSchema(Schema):
     file_id = fields.Integer(attribute="file.id", required=True)
 
 
+class EmitJobRecoveredSchema(Schema):
+    """ Schema of the 'job_recovered' event emitted by the server """
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    started_at = fields.DateTime(required=True, attribute='startedAt')
+    interrupted = fields.Boolean(required=True)
+
+
 class OnInitialDataSchema(Schema):
     """ Schema of the 'initial_data' event that the server is listening for """
     state = PrinterStateField(required=True)
@@ -79,6 +87,7 @@ class OnPrintStartedSchema(Schema):
 class OnPrintFinishedSchema(Schema):
     """ Schema of the 'print_finished' event that the server is listening for """
     job_id = fields.Integer(required=True)
+    cancelled = fields.Boolean(required=True)
 
 
 class OnPrintFeedbackSchema(Schema):
@@ -94,4 +103,4 @@ class OnPrinterTemperaturesUpdatedSchema(PrinterTemperaturesUpdatedSchema):
 
 class OnJobProgressUpdatedSchema(CurrentJobInfoSchema):
     """ Schema of the 'printer_temperatures_updated' event that the server is listening for """
-    pass
+    estimated_seconds_left = EstimatedSecondsLeft(attribute="estimated_time_left", allow_none=True)

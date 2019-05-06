@@ -14,8 +14,9 @@ from flask import current_app, request
 from flask_socketio import Namespace, emit
 
 from ..schemas import (
-    EmitPrintJobSchema, OnInitialDataSchema, OnStateUpdatedSchema, OnExtrudersUpdatedSchema, OnPrintStartedSchema,
-    OnPrintFinishedSchema, OnPrintFeedbackSchema, OnPrinterTemperaturesUpdatedSchema, OnJobProgressUpdatedSchema
+    EmitPrintJobSchema, EmitJobRecoveredSchema, OnInitialDataSchema, OnStateUpdatedSchema, OnExtrudersUpdatedSchema,
+    OnPrintStartedSchema, OnPrintFinishedSchema, OnPrintFeedbackSchema, OnPrinterTemperaturesUpdatedSchema,
+    OnJobProgressUpdatedSchema
 )
 from ...database import Job
 
@@ -37,6 +38,19 @@ class PrinterNamespace(Namespace):
 
         if not serialized_data.errors:
             emit("print_job", serialized_data.data, room=sid, broadcast=broadcast, namespace=self.namespace)
+        else:
+            # TODO: Send error notification
+            pass
+
+    def emit_job_recovered(self, job: Job, sid: str = None, broadcast: bool = False):
+        """
+        Emit the event 'job_recovered'. The data send is defined by
+        :class:`EmitJobRecoveredSchema`
+        """
+        serialized_data = EmitJobRecoveredSchema().dump(job)
+
+        if not serialized_data.errors:
+            emit("job_recovered", serialized_data.data, room=sid, broadcast=broadcast, namespace=self.namespace)
         else:
             # TODO: Send error notification
             pass

@@ -256,32 +256,32 @@ def test_job_db_manager(db_manager):
     assert usable_printers[0].id == printer.id
 
     expected_queue_order = [jobs[1], jobs[2], jobs[3], jobs[4], jobs[0]]
-    print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
+    # print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
     expected_queue_order = [jobs[3], jobs[1], jobs[2], jobs[4], jobs[0]]
     db_manager.reorder_job_in_queue(jobs[3], None)
-    print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
+    # print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
     expected_queue_order = [jobs[1], jobs[2], jobs[3], jobs[4], jobs[0]]
     db_manager.reorder_job_in_queue(jobs[3], jobs[2])
-    print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
+    # print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
     expected_queue_order = [jobs[1], jobs[0], jobs[2], jobs[3], jobs[4]]
     db_manager.reorder_job_in_queue(jobs[0], jobs[1])
-    print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
+    # print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
     expected_queue_order = [jobs[1], jobs[2], jobs[0], jobs[3], jobs[4]]
     db_manager.reorder_job_in_queue(jobs[2], jobs[1])
-    print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
+    # print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
     expected_queue_order = [jobs[1], jobs[0], jobs[3], jobs[4], jobs[2]]
     db_manager.reorder_job_in_queue(jobs[2], jobs[4])
-    print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
+    # print(Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all())
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
     db_manager.update_job(printing_job, assigned_printer=printer)
@@ -300,7 +300,9 @@ def test_job_db_manager(db_manager):
     expected_queue_order = [jobs[1], jobs[3], jobs[4], jobs[2], jobs[0]]
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
 
-    printing_job = db_manager.set_printing_job(db_manager.get_first_job_in_queue())
+    first_job_in_queue = db_manager.get_first_job_in_queue()
+    db_manager.update_job(first_job_in_queue, assigned_printer=printer)
+    printing_job = db_manager.set_printing_job(first_job_in_queue)
     assert printing_job.state.stateString == "Printing"
 
     expected_queue_order = [jobs[1], jobs[4], jobs[2], jobs[0]]
@@ -315,3 +317,8 @@ def test_job_db_manager(db_manager):
 
     expected_queue_order = [jobs[3], jobs[1], jobs[4], jobs[2], jobs[0]]
     assert expected_queue_order == Job.query.filter(Job.priority_i.isnot(None)).order_by(Job.priority_i.asc()).all()
+
+    db_manager.delete_job(jobs[0])
+    none_job = db_manager.get_jobs(id=jobs[0].id)
+
+    assert none_job is None

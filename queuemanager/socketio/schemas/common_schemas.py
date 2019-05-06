@@ -48,4 +48,4 @@ class CurrentJobInfoSchema(JobInfoSchema):
     name = fields.String()
     file_name = fields.String(attribute="file.name")
     progress = fields.Float(allow_none=True)
-    estimated_seconds_left = EstimatedSecondsLeft(attribute="estimated_time_left", allow_none=True)
+    estimated_seconds_left = EstimatedSecondsLeft(attribute="estimatedTimeLeft", allow_none=True)

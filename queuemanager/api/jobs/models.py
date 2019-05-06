@@ -26,12 +26,12 @@ job_state_model = api.model('JobState', {
     'string': fields.String(attribute="stateString")
 })
 
-job_allowed_material_model = api.model('JobAllowed', {
+job_allowed_material_model = api.model('JobAllowedMaterial', {
     'material': fields.Nested(printer_material_model),
     'extruder_index': fields.Integer(attribute="extruderIndex")
 })
 
-job_allowed_extruder_model = api.model('JobAllowed', {
+job_allowed_extruder_model = api.model('JobAllowedExtruder', {
     'type': fields.Nested(printer_extruder_type_model),
     'extruder_index': fields.Integer(attribute="extruderIndex")
 })
@@ -60,4 +60,12 @@ job_model = api.model('Job', {
     'allowed_materials': fields.Nested(job_allowed_material_model, as_list=True, skip_none=True),
     'allowed_extruder_types': fields.Nested(job_allowed_extruder_model, as_list=True, skip_none=True),
     'extruders_data': fields.Nested(job_extruder_model, as_list=True, skip_none=True)
+})
+
+edit_job_model = api.model('EditJob', {
+    'name': fields.String,
+})
+
+reorder_job_model = api.model('ReorderJob', {
+    'previous_job_id': fields.Integer(required=True, min=-1)
 })

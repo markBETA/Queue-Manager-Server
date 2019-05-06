@@ -24,6 +24,7 @@ from .printer import (
     PrinterExtruderSchema, PrinterSchema
 )
 from .printer_namespace import (
-    EmitPrintJobSchema, OnInitialDataSchema, OnStateUpdatedSchema, OnExtrudersUpdatedSchema, OnPrintStartedSchema,
-    OnPrintFinishedSchema, OnPrintFeedbackSchema, OnPrinterTemperaturesUpdatedSchema, OnJobProgressUpdatedSchema
+    EmitPrintJobSchema, EmitJobRecoveredSchema, OnInitialDataSchema, OnStateUpdatedSchema, OnExtrudersUpdatedSchema,
+    OnPrintStartedSchema, OnPrintFinishedSchema, OnPrintFeedbackSchema, OnPrinterTemperaturesUpdatedSchema,
+    OnJobProgressUpdatedSchema
 )

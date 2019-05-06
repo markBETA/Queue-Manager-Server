@@ -204,3 +204,14 @@ def test_printer_db_manager(db_manager):
     assert default_printer.totalSuccessPrints == 1
     assert default_printer.totalFailedPrints == 1
     assert default_printer.totalPrintingTime == timedelta(hours=6, minutes=20, seconds=59)
+
+    user = db_manager.get_users(id=1)
+    file = db_manager.insert_file(user, "test", "/home/Marc/test")
+    job = db_manager.insert_job("test", file, user)
+    db_manager.enqueue_created_job(job)
+    db_manager.update_job(job, canBePrinted=True)
+    db_manager.assign_job_to_printer(default_printer, job)
+
+    default_printer = db_manager.get_printers(name="default")
+
+    assert default_printer.current_job.id == job.id

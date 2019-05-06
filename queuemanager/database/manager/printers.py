@@ -20,7 +20,7 @@ from .exceptions import (
 )
 from ..models import (
     PrinterModel, PrinterState, PrinterExtruderType, PrinterMaterial, PrinterExtruder,
-    Printer
+    Printer, Job
 )
 
 
@@ -222,3 +222,15 @@ class DBManagerPrinters(DBManagerPrinterModels, DBManagerPrinterStates, DBManage
         # Commit the changes to the database
         if self.autocommit:
             self.commit_changes()
+
+    def assign_job_to_printer(self, printer: Printer, job: Job):
+        # Check that the job is in the 'Waiting'
+        if job.state.stateString != "Waiting":
+            raise InvalidParameter("The job to assign needs to be in the state 'Waiting''")
+        # Check also if the job can be printed before assign it
+        if not job.canBePrinted:
+            raise InvalidParameter('Can\'t assign a job to a printer that can\'t be printed')
+
+        self.update_printer(printer, idCurrentJob=job.id)
+
+        return printer

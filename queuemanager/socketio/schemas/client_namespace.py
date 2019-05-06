@@ -15,7 +15,6 @@ from marshmallow import Schema, fields
 from .common_schemas import (
     PrinterTemperaturesUpdatedSchema, JobInfoSchema, CurrentJobInfoSchema
 )
-from .custom_fields import EstimatedSecondsLeft
 from .printer import PrinterSchema
 
 
@@ -59,7 +58,7 @@ class EmitPrinterTemperaturesUpdatedSchema(PrinterTemperaturesUpdatedSchema):
 
 class EmitJobProgressUpdatedSchema(CurrentJobInfoSchema):
     """ Schema of the 'job_progress_updated' event emitted by the server """
-    estimated_seconds_left = EstimatedSecondsLeft(attribute="estimatedTimeLeft", allow_none=True)
+    pass
 
 
 class OnAnalyzeJob(Schema):

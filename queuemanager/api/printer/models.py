@@ -50,8 +50,8 @@ printer_material_model = api.model('PrinterMaterial', {
 })
 
 printer_extruder_model = api.model('PrinterExtruder', {
-    'type': fields.Nested(printer_extruder_type_model),
-    'material': fields.Nested(printer_material_model),
+    'type': fields.Nested(printer_extruder_type_model, skip_none=True),
+    'material': fields.Nested(printer_material_model, skip_none=True),
     'index': fields.Integer
 })
 
@@ -66,9 +66,9 @@ printer_current_job_model = api.model('PrinterCurrentJob', {
 printer_model = api.model('Printer', {
     'id': fields.Integer,
     'name': fields.String,
-    'model': fields.Nested(printer_model_model),
-    'state': fields.Nested(printer_state_model),
-    'extruders': fields.Nested(printer_extruder_model, as_list=True),
+    'model': fields.Nested(printer_model_model, skip_none=True),
+    'state': fields.Nested(printer_state_model, skip_none=True),
+    'extruders': fields.Nested(printer_extruder_model, as_list=True, skip_none=True),
     'serial_number': fields.String(attribute="serialNumber"),
     'ip_address': fields.String(attribute="ipAddress"),
     'registered_at': fields.DateTime(attribute="registeredAt"),

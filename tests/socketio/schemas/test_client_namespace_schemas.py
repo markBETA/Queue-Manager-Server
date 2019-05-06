@@ -1,5 +1,5 @@
 """
-This module implements the printer namespace related marshmallow schemas testing.
+This module implements the client namespace related marshmallow schemas testing.
 """
 
 __author__ = "Marc Bermejo"
@@ -148,6 +148,7 @@ def test_emit_printer_data_updated_schema(db_manager):
 
 
 def test_emit_printer_temperatures_updated_schema(db_manager):
+    bed_temp = 55.1
     extruders_temp = [
         {
             "temp_value": 24.3,
@@ -159,7 +160,7 @@ def test_emit_printer_temperatures_updated_schema(db_manager):
         }
     ]
 
-    helper = EmitPrinterTemperaturesUpdatedHelper(55.1, extruders_temp)
+    helper = EmitPrinterTemperaturesUpdatedHelper(bed_temp, extruders_temp)
     dump_result = EmitPrinterTemperaturesUpdatedSchema().dump(helper.__dict__)
 
     assert len(dump_result.errors) == 0

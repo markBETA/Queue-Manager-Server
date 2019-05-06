@@ -36,6 +36,7 @@ def printer_state_initial_values():
         PrinterState(stateString="Printing", isOperationalState=True),
         PrinterState(stateString="Paused", isOperationalState=True),
         PrinterState(stateString="Print finished", isOperationalState=True),
+        PrinterState(stateString="Busy", isOperationalState=True),
         PrinterState(stateString="Error", isOperationalState=False),
         PrinterState(stateString="Unknown", isOperationalState=False),
     ]
