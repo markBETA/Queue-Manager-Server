@@ -6,6 +6,7 @@ from queuemanager import create_app
 from queuemanager.database import db as _db
 from queuemanager.database import db_mgr
 from queuemanager.file_storage import FileManager
+from queuemanager.socketio import socketio, socketio_mgr
 
 TESTDB = 'test_project.db'
 TESTDB_PATH = "{}".format(TESTDB)
@@ -88,7 +89,7 @@ def db_manager(session):
 
 @pytest.fixture(scope='function')
 def file_manager(app, db_manager, request):
-    file_manager = FileManager(db_manager, app)
+    file_manager = FileManager(app, db_manager=db_manager)
 
     def teardown():
         for the_file in os.listdir(app.config['FILE_MANAGER_UPLOAD_DIR']):
@@ -96,8 +97,31 @@ def file_manager(app, db_manager, request):
             try:
                 if os.path.isfile(file_path):
                     os.unlink(file_path)
+                    os.rmdir(file_path)
             except Exception as e:
                 print(e)
 
     request.addfinalizer(teardown)
     return file_manager
+
+
+@pytest.fixture(scope='function')
+def socketio_client(app, session, db_manager):
+    socketio_client = socketio.test_client(app)
+    socketio_client.connect("/client")
+    socketio_client.connect("/printer")
+
+    db_manager.update_session(session)
+
+    socketio_mgr.set_db_manager(db_manager)
+
+    return socketio_client
+
+
+@pytest.fixture(scope='function')
+def http_client(app, session, db_manager):
+    db_manager.update_session(session)
+
+    socketio_mgr.set_db_manager(db_manager)
+
+    return app.test_client()

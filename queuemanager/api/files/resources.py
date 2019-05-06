@@ -11,9 +11,12 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from flask import send_file
-from flask_restplus import Resource
+from flask_restplus import Resource, marshal
 
 from .definitions import api
+from .models import (
+    file_model
+)
 from ...database import db_mgr as db
 from ...database.manager.exceptions import (
     DBManagerError
@@ -51,3 +54,27 @@ class File(Resource):
             return {'message': 'Unable to retrieve the file from the filesystem'}, 500
 
         return send_file(file_d, as_attachment=True, attachment_filename=file.name)
+
+
+@api.route("/<int:file_id>/info")
+class File(Resource):
+    """
+    /files/<file_id>/info
+    """
+    @api.doc(id="get_file_info")
+    @api.response(200, "Success", file_model)
+    @api.response(404, "Can't find any file with this ID in the database")
+    @api.response(500, "Unable to read the data from the database")
+    def get(self, file_id: int):
+        """
+        Returns the file with id=file_id
+        """
+        try:
+            file = db.get_files(id=file_id)
+            if not file:
+                return {"message": "Can't find any file with this ID in the database"}, 404
+        except DBManagerError:
+            return {'message': 'Unable to read the data from the database'}, 500
+
+        return marshal(file, file_model, skip_none=True), 200
+

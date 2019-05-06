@@ -27,11 +27,11 @@ class File(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     idUser = db.Column(db.Integer, db.ForeignKey(USERS_TABLE+'.id'), nullable=False)
     name = db.Column(db.String(256), nullable=False)
-    fullPath = db.Column(db.String(256), unique=True, nullable=False)
+    fullPath = db.Column(db.String(256), unique=True)
     createdAt = db.Column(db.DateTime, default=datetime.now, nullable=False)
     estimatedPrintingTime = db.Column(db.Interval)
     estimatedNeededMaterial = db.Column(db.Float)
-    fileInformation = db.Column(db.JSON)
+    fileData = db.Column(db.JSON)
 
     user = db.relationship('User', back_populates='files', uselist=False)
     jobs = db.relationship('Job', back_populates='file', cascade="all, delete-orphan")

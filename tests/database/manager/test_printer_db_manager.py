@@ -11,11 +11,12 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 
-from queuemanager.database.models import (
+from datetime import timedelta
+
+from queuemanager.database.initial_values import (
     printer_model_initial_values, printer_state_initial_values, printer_extruder_type_initial_values,
     printer_material_initial_values, printer_extruder_initial_values, printer_initial_values
 )
-from datetime import timedelta
 
 
 def test_printer_models_db_manager(db_manager):
@@ -203,3 +204,14 @@ def test_printer_db_manager(db_manager):
     assert default_printer.totalSuccessPrints == 1
     assert default_printer.totalFailedPrints == 1
     assert default_printer.totalPrintingTime == timedelta(hours=6, minutes=20, seconds=59)
+
+    user = db_manager.get_users(id=1)
+    file = db_manager.insert_file(user, "test", "/home/Marc/test")
+    job = db_manager.insert_job("test", file, user)
+    db_manager.enqueue_created_job(job)
+    db_manager.update_job(job, canBePrinted=True)
+    db_manager.assign_job_to_printer(default_printer, job)
+
+    default_printer = db_manager.get_printers(name="default")
+
+    assert default_printer.current_job.id == job.id

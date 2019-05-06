@@ -15,7 +15,7 @@ from flask_restplus import Resource, marshal
 
 from .definitions import api
 from .models import (
-    job_model
+    job_model, edit_job_model, reorder_job_model
 )
 from ..definitions import prepare_database_filters
 from ...database import db_mgr as db
@@ -42,7 +42,7 @@ class Jobs(Resource):
     @api.param("name", "Get job with this name", "query", **{"type": str})
     @api.param("can_be_printed", "Get jobs that can be printed or not", "query", **{"type": bool})
     @api.param("order_by_priority", "Get the jobs ordered by the priority index", "query", **{"type": bool})
-    @api.response(200, "Success", job_model)
+    @api.response(200, "Success", [job_model])
     @api.response(400, "Invalid query parameter")
     @api.response(500, "Unable to read the data from the database")
     def get(self):
@@ -111,7 +111,7 @@ class Jobs(Resource):
 
         # Retrieve the file information
         try:
-            file_mgr.retrieve_file_info(file)
+            file_mgr.retrieve_file_basic_info(file)
         except (FileManagerError, DBManagerError):
             current_app.logger.warning("Can't retrieve the file '{}' information".format(file))
 
@@ -133,90 +133,174 @@ class Jobs(Resource):
         return marshal(job, job_model, skip_none=True), 201
 
 
-#
-#
-# @api.route("/<int:job_id>")
-# class Job(Resource):
-#     """
-#     /jobs/<job_id>
-#     """
-#     @api.doc(id="getJob")
-#     @api.response(200, "Success")
-#     @api.response(404, "Job with id=job_id doesn't exist")
-#     @api.response(500, "Unable to read the data from the database")
-#     def get(self, job_id):
-#         """
-#         Returns the job with id=job_id
-#         """
-#         try:
-#             job = db.get_job(id=job_id)
-#             if not job:
-#                 return {"message": "Job with id=%d doesn't exist" % job_id}, 404
-#         except DBInternalError:
-#             return {'message': 'Unable to read the data from the database'}, 500
-#
-#         return job_schema.dump(job).data, 200
-#
-#     @api.doc("deleteJob")
-#     @api.expect(header_parser)
-#     @api.response(200, "Success")
-#     @api.response(404, "Job with id=job_id doesn't exist")
-#     @api.response(500, "Unable to delete from the database")
-#     @auth.requires_auth
-#     def delete(self, job_id):
-#         """
-#         Deletes the job with id=job_id
-#         """
-#         try:
-#             job = db.delete_job(job_id)
-#             if not job:
-#                 return {"message": "Job with id=%d doesn't exist" % job_id}, 404
-#             filepath = job.file.path
-#             response = job_schema.dump(job).data
-#             db.commit_changes()
-#             os.remove(filepath)
-#         except DBInternalError:
-#             return {'message': 'Unable to delete from the database'}, 500
-#         except DBManagerError as e:
-#             return {'message': str(e)}, 400
-#         except Exception as e:
-#             return {'message': str(e)}, 500
-#
-#         socket_manager.send_queues(**{"broadcast": True})
-#
-#         return response, 200
-#
-#     @api.doc(id="updateJob")
-#     @api.expect(header_parser)
-#     @api.param("name", "Job name", "formData", **{"type": str, "example": "benchy"})
-#     @api.param("order", "Order", "formData", **{"type": int, "example": 3})
-#     @api.response(200, "Success")
-#     @api.response(400, "No input data provided")
-#     @api.response(404, "Job with id=job_id doesn't exist")
-#     @api.response(500, "Unable to update the database")
-#     @auth.requires_admin
-#     def put(self, job_id):
-#         """
-#         Updates the job with id=job_id
-#         """
-#         parser = reqparse.RequestParser(bundle_errors=True)
-#         parser.add_argument("name", type=str, location="form", store_missing=False)
-#         parser.add_argument("order", type=int, location="form", store_missing=False)
-#         args = parser.parse_args()
-#
-#         if not bool(args):
-#             return {'message': 'No input data provided'}, 400
-#
-#         try:
-#             job = db.update_job(job_id, **args)
-#             if not job:
-#                 return {"message": "Job with id=%d doesn't exist" % job_id}, 404
-#             db.commit_changes()
-#         except DBInternalError:
-#             return {'message': 'Unable to update the database'}, 500
-#         except DBManagerError as e:
-#             return {'message': str(e)}, 400
-#
-#         socket_manager.send_queues(**{"broadcast": True})
-#
-#         return job_schema.dump(job).data, 200
+@api.route("/not_done")
+class NotDoneJobs(Resource):
+    """
+    /jobs/not_done
+    """
+
+    @api.doc(id="get_not_done_jobs")
+    @api.param("order_by_priority", "Get the jobs ordered by the priority index", "query", **{"type": bool})
+    @api.response(200, "Success", [job_model])
+    @api.response(400, "Invalid query parameter")
+    @api.response(500, "Unable to read the data from the database")
+    def get(self):
+        """
+        Returns all jobs in the database after apply the filters set in the query
+        """
+        allowed_filters = {"order_by_priority"}
+
+        try:
+            prepare_database_filters(request.args, allowed_filters=allowed_filters)
+        except KeyError as e:
+            return {'message': str(e)}, 400
+
+        # Read the 'order_by_priority' param from the query
+        order_by_priority = False
+        if "order_by_priority" in request.args:
+            order_by_priority = request.args["order_by_priority"]
+
+        try:
+            jobs = db.get_not_done_jobs(order_by_priority)
+        except DBInternalError:
+            return {'message': 'Unable to read the data from the database'}, 500
+        except DBManagerError as e:
+            return {'message': str(e)}, 400
+
+        return marshal(jobs, job_model, skip_none=True), 200
+
+
+@api.route("/<int:job_id>")
+class Job(Resource):
+    """
+    /jobs/<job_id>
+    """
+
+    @api.doc(id="get_job")
+    @api.response(200, "Success", job_model)
+    @api.response(404, "There is no job with this ID in the database")
+    @api.response(500, "Unable to read the data from the database")
+    def get(self, job_id: int):
+        """
+        Returns the job data with the specified ID
+        """
+        try:
+            job = db.get_jobs(id=job_id)
+        except DBInternalError:
+            return {'message': 'Unable to read the data from the database'}, 500
+
+        if job is None:
+            return {'message': 'There is no job with this ID in the database'}, 404
+        else:
+            return marshal(job, job_model, skip_none=True), 200
+
+    @api.doc(id="delete_job")
+    @api.param("delete_file", "Delete the file associated with this job", "query", **{"type": bool, "default": True})
+    @api.response(200, "Success")
+    @api.response(404, "There is no job with this ID in the database")
+    @api.response(500, "Unable to read the data from the database")
+    @api.response(500, "Unable to delete the data from the database")
+    @api.response(500, "Unable to delete the file from the filesystem")
+    def delete(self, job_id: int):
+        """
+        Delete the job with the specified ID
+        """
+        delete_file = request.args.get("delete_file", default=True)
+
+        try:
+            job = db.get_jobs(id=job_id)
+        except DBInternalError:
+            return {'message': 'Unable to read the data from the database'}, 500
+
+        if job is None:
+            return {'message': 'There is no job with this ID in the database'}, 404
+
+        if delete_file:
+            try:
+                file_mgr.delete_file(job.file)
+            except (FileManagerError, DBManagerError) as e:
+                return {'message': str(e)}, 500
+        else:
+            try:
+                db.delete_job(job)
+            except DBInternalError:
+                return {'message': 'Unable to delete the data from the database'}, 500
+
+        socketio_mgr.client_namespace.emit_jobs_updated(broadcast=True)
+
+        return {'message': 'Job <{}> deleted from the database'.format(job.name)}, 200
+
+    @api.doc(id="put_job")
+    @api.expect(edit_job_model)
+    @api.response(200, "Success", job_model)
+    @api.response(404, "There is no job with this ID in the database")
+    @api.response(500, "Unable to read the data from the database")
+    @api.response(500, "Unable to edit the job from the database")
+    def put(self, job_id: int):
+        """
+        Edit the job with the specified ID
+        """
+        try:
+            job = db.get_jobs(id=job_id)
+        except DBInternalError:
+            return {'message': 'Unable to read the data from the database'}, 500
+
+        if job is None:
+            return {'message': 'There is no job with this ID in the database'}, 404
+
+        try:
+            updated_job = db.update_job(job, **request.json)
+        except DBManagerError as e:
+            if isinstance(e, UniqueConstraintError):
+                return {'message': 'Job name already exists'}, 409
+            else:
+                return {'message': str(e)}, 500
+
+        socketio_mgr.client_namespace.emit_jobs_updated(broadcast=True)
+
+        return marshal(updated_job, job_model, skip_none=True), 200
+
+
+@api.route("/reorder/<int:job_id>")
+class Job(Resource):
+    """
+    /jobs/reorder/<int:job_id>
+    """
+
+    @api.doc(id="reorder_job")
+    @api.expect(reorder_job_model)
+    @api.response(200, "Job reordered successfully")
+    @api.response(404, "There is no job with this ID in the database")
+    @api.response(500, "Unable to read the data from the database")
+    @api.response(500, "Unable to edit the job from the database")
+    def put(self, job_id: int):
+        previous_job_id = request.json.get("previous_job_id")
+        if previous_job_id < 0:
+            previous_job_id = None
+
+        try:
+            job = db.get_jobs(id=job_id)
+        except DBInternalError:
+            return {'message': 'Unable to read the data from the database'}, 500
+
+        if job is None:
+            return {'message': 'There is no job with this ID in the database'}, 404
+
+        if previous_job_id is not None:
+            try:
+                previous_job = db.get_jobs(id=previous_job_id)
+            except DBInternalError:
+                return {'message': 'Unable to read the data from the database'}, 500
+            if previous_job is None:
+                return {'message': 'There is no job with this ID in the database'}, 404
+        else:
+            previous_job = None
+
+        try:
+            db.reorder_job_in_queue(job, previous_job)
+        except DBManagerError as e:
+            return {'message': str(e)}, 500
+
+        socketio_mgr.client_namespace.emit_jobs_updated(broadcast=True)
+
+        return {'message': 'Job <{}> reordered successfully'.format(job.name)}, 200

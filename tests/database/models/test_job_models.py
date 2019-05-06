@@ -11,11 +11,11 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from queuemanager.database import (
-    JobState, JobAllowedMaterial, JobAllowedExtruder, Job, PrinterMaterial, PrinterExtruderType
+    JobState, JobAllowedMaterial, JobAllowedExtruder, JobExtruder, Job, PrinterMaterial, PrinterExtruderType
 )
 from queuemanager.database import job_state_initial_values
-from .test_user_models import add_user
 from .test_file_models import add_file
+from .test_user_models import add_user
 
 
 def add_job_allowed_materials(session, job, allowed_materials):
@@ -50,6 +50,23 @@ def add_job_allowed_extruder_types(session, job, allowed_extruder_types):
     session.commit()
 
     return job_allowed_extruder_types
+
+
+def add_job_extruders(session, job, extruders_data):
+    job_extruders = []
+
+    for estimated_needed_material, index in extruders_data:
+        job_extruder = JobExtruder(
+            idJob=job.id,
+            estimatedNeededMaterial=estimated_needed_material,
+            extruderIndex=index
+        )
+        session.add(job_extruder)
+        job_extruders.append(job_extruder)
+
+    session.commit()
+
+    return job_extruders
 
 
 def add_job(session, file, user):
@@ -117,6 +134,29 @@ def test_job_allowed_extruder_type_model(session):
         assert job_allowed_extruder_types[i].id > 0
         assert job_allowed_extruder_types[i].job == job
         assert job_allowed_extruder_types[i].type == allowed_extruder_types[i]
+
+
+def test_job_extruders_model(session):
+    user = add_user(session)
+    file = add_file(session, user)
+    job = add_job(session, file, user)
+    extruders_data = [
+        (0, 0),
+        (0.23, 1),
+    ]
+    job_extruders = add_job_extruders(session, job, extruders_data)
+
+    str(job_extruders)
+
+    assert len(extruders_data) == len(job_extruders)
+
+    for i in range(len(job_extruders)):
+        assert job_extruders[i].id > 0
+        assert job_extruders[i].job == job
+        assert job_extruders[i].used_extruder_type is None
+        assert job_extruders[i].used_material is None
+        assert job_extruders[i].estimatedNeededMaterial == extruders_data[i][0]
+        assert job_extruders[i].extruderIndex == extruders_data[i][1]
 
 
 def test_job_model(session):

@@ -10,8 +10,9 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from flask_restplus import fields
 from datetime import timedelta
+
+from flask_restplus import fields
 
 
 ####################
@@ -48,7 +49,11 @@ def prepare_database_filters(filters: dict, allowed_filters: set):
 # CUSTOM MODEL FIELDS #
 #######################
 
-class TimeField(fields.Raw):
+class TimeToSecondsField(fields.Raw):
+    """ This field is used to convert a timedelta object to total_seconds"""
+    __schema_type__ = 'float'
+    __schema_format__ = 'time-seconds'
+
     def format(self, value: timedelta):
         """ Encode a timedelta object to string """
         return value.total_seconds()

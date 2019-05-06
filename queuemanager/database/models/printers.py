@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 from .table_names import (
     PRINTER_MODELS_TABLE, PRINTER_STATES_TABLE, PRINTER_EXTRUDER_TYPES_TABLE,
-    PRINTER_MATERIALS_TABLE, PRINTER_EXTRUDERS_TABLE, PRINTERS_TABLE
+    PRINTER_MATERIALS_TABLE, PRINTER_EXTRUDERS_TABLE, PRINTERS_TABLE, JOBS_TABLE
 )
 from ..definitions import db_conn as db
 
@@ -124,6 +124,7 @@ class Printer(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     idModel = db.Column(db.Integer, db.ForeignKey(PRINTER_MODELS_TABLE + '.id'), nullable=False)
     idState = db.Column(db.Integer, db.ForeignKey(PRINTER_STATES_TABLE + '.id'), nullable=False)
+    idCurrentJob = db.Column(db.Integer, db.ForeignKey(JOBS_TABLE + '.id'))
     name = db.Column(db.String(256), unique=True, nullable=False)
     serialNumber = db.Column(db.String(256), unique=True, nullable=False)
     ipAddress = db.Column(db.String(16))
@@ -137,6 +138,7 @@ class Printer(db.Model):
     model = db.relationship('PrinterModel', back_populates='printers', uselist=False)
     state = db.relationship('PrinterState', back_populates='printers', uselist=False)
     extruders = db.relationship('PrinterExtruder', back_populates='printer', cascade="all, delete-orphan")
+    current_job = db.relationship('Job', back_populates='assigned_printer', uselist=False)
 
     def __repr__(self):
         is_operative = self.state.isOperationalState

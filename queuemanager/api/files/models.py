@@ -13,7 +13,7 @@ __status__ = "Development"
 from flask_restplus import fields
 
 from .definitions import api
-from ..definitions import TimeField
+from ..definitions import TimeToSecondsField
 
 ###########################
 # FILE MODELS DECLARATION #
@@ -25,6 +25,6 @@ file_model = api.model('File', {
     'id': fields.Integer,
     'name': fields.String,
     'created_at': fields.DateTime(attribute="createdAt"),
-    'estimated_printing_time': TimeField(attribute="estimatedPrintingTime"),
+    'estimated_printing_time': TimeToSecondsField(attribute="estimatedPrintingTime"),
     'estimated_needed_material': fields.Float(attribute="estimatedNeededMaterial")
 })

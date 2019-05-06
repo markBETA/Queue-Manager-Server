@@ -17,4 +17,4 @@ from flask_socketio import SocketIO
 # SOCKET.IO SERVER MANAGER #
 ############################
 
-socketio = SocketIO(logger=True)
+socketio = SocketIO()

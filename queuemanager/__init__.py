@@ -3,15 +3,13 @@ This server stores the data sent from the printers and has methods to retrieve i
 In this package has all needed modules for the mentioned server.
 """
 
-__author__ = "Eloi Pardo"
-__credits__ = ["Eloi Pardo", "Marc Bermejo"]
+__author__ = "Marc Bermejo"
+__credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
 __version__ = "0.0.1"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
-
-from logging import INFO
 
 from eventlet import monkey_patch
 
@@ -37,6 +35,14 @@ def create_app(name=__name__, override_config=None, init_db_static_values=False)
         # Load the test config if passed in
         app.config.from_mapping(override_config)
 
+    from logging import INFO, DEBUG
+
+    # Set the logger level
+    if app.config.get("DEBUG") > 1:
+        app.logger.setLevel(DEBUG)
+    else:
+        app.logger.setLevel(INFO)
+
     # Register the database commands
     from .database import init_app as db_init_app
     db_init_app(app)
@@ -55,12 +61,10 @@ def create_app(name=__name__, override_config=None, init_db_static_values=False)
 
         # Init the socket.io interface
         from .socketio import socketio
-        socketio.init_app(app)
+        socketio.init_app(app, logger=(app.config.get("DEBUG") > 0))
 
         # Register the API blueprint
         from queuemanager.api import api_bp
         app.register_blueprint(api_bp, url_prefix='/api')
-
-    app.logger.setLevel(INFO)
 
     return app

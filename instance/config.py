@@ -4,6 +4,8 @@ Config file of the Flask App.
 
 import os
 
+DEBUG = int(os.getenv('DEBUG', 0))
+
 SECRET_KEY = os.getenv('SECRET_KEY', 'my_secret_key')
 
 SQLALCHEMY_DATABASE_URI = 'sqlite:///data/database.db'

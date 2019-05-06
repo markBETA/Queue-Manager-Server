@@ -11,11 +11,11 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from .base_class import DBManagerBase
-from ..models import (
-    User, File
-)
 from .exceptions import (
     InvalidParameter
+)
+from ..models import (
+    User, File
 )
 
 
@@ -23,7 +23,7 @@ class DBManagerFiles(DBManagerBase):
     """
     This class implements the database manager class for the file operations
     """
-    def insert_file(self, user: User, name: str, full_path: str, **kwargs):
+    def insert_file(self, user: User, name: str, full_path: str = None, **kwargs):
         # Check parameter values
         if name == "":
             raise InvalidParameter("The 'name' parameter can't be an empty string")

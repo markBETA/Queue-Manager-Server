@@ -50,11 +50,3 @@ def test_user_model(session):
         assert expected_users[i].id == users[i].id
         assert expected_users[i].username == users[i].username
         assert expected_users[i].isAdmin == users[i].isAdmin
-
-    expected_user_json = {
-        "id": user.id,
-        "username": user.username,
-        "isAdmin": user.isAdmin
-    }
-
-    assert expected_user_json == user.get_json()

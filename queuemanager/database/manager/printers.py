@@ -20,7 +20,7 @@ from .exceptions import (
 )
 from ..models import (
     PrinterModel, PrinterState, PrinterExtruderType, PrinterMaterial, PrinterExtruder,
-    Printer
+    Printer, Job
 )
 
 
@@ -208,7 +208,7 @@ class DBManagerPrinters(DBManagerPrinterModels, DBManagerPrinterStates, DBManage
 
     def add_finished_print(self, printer: Printer, success: bool, printing_time: timedelta):
         # Initialize the values to update dictionary
-        values_to_update = {Printer.totalPrintingTime: Printer.totalPrintingTime + printing_time}
+        values_to_update = {Printer.totalPrintingTime: printer.totalPrintingTime + printing_time}
 
         # Decide if we will need to increment the succeed or failed prints counter
         if success:
@@ -218,3 +218,19 @@ class DBManagerPrinters(DBManagerPrinterModels, DBManagerPrinterStates, DBManage
 
         # Update the values in the database
         self.execute_update(Printer.query.filter_by(id=printer.id), values_to_update)
+
+        # Commit the changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
+    def assign_job_to_printer(self, printer: Printer, job: Job):
+        # Check that the job is in the 'Waiting'
+        if job.state.stateString != "Waiting":
+            raise InvalidParameter("The job to assign needs to be in the state 'Waiting''")
+        # Check also if the job can be printed before assign it
+        if not job.canBePrinted:
+            raise InvalidParameter('Can\'t assign a job to a printer that can\'t be printed')
+
+        self.update_printer(printer, idCurrentJob=job.id)
+
+        return printer

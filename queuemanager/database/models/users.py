@@ -10,12 +10,14 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from ..definitions import db_conn as db
+from datetime import datetime
+
+from werkzeug.security import generate_password_hash, check_password_hash
+
 from .table_names import (
     USERS_TABLE
 )
-from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
+from ..definitions import db_conn as db
 
 
 class User(db.Model):
@@ -38,13 +40,6 @@ class User(db.Model):
 
     def verify_password(self, password):
         return check_password_hash(self.password, password)
-
-    def get_json(self):
-        return {
-            "id": self.id,
-            "username": self.username,
-            "isAdmin": self.isAdmin
-        }
 
     def __repr__(self):
         return '[{}]<id: {} / username: {} / isAdmin: {}>'.format(self.__tablename__, self.id,

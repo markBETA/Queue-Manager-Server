@@ -10,17 +10,18 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from sqlalchemy.event import listens_for
+
 from queuemanager.database.definitions import db_conn as db
-from queuemanager.database.models import (
-    JobState, PrinterModel, PrinterState, PrinterExtruderType, PrinterMaterial, PrinterExtruder,
-    Printer, User
-)
-from .models import (
+from .initial_values import (
     printer_material_initial_values, printer_state_initial_values, printer_extruder_type_initial_values,
     printer_model_initial_values, printer_extruder_initial_values, printer_initial_values,
     user_initial_values, job_state_initial_values
 )
-from sqlalchemy.event import listens_for
+from .models import (
+    JobState, PrinterModel, PrinterState, PrinterExtruderType, PrinterMaterial, PrinterExtruder,
+    Printer, User
+)
 
 
 def _add_rows(row_list):
