@@ -12,24 +12,25 @@ __status__ = "Development"
 
 from marshmallow import Schema, fields
 
-from ...database import db_mgr
-
-
-class JobStateField(fields.Raw):
-    """ Custom field for deserialize the printer state field """
-    def _deserialize(self, value, attr, data):
-        if value in db_mgr.job_state_ids.keys():
-            return db_mgr.job_state_ids[value]
-        else:
-            return None
+from ..definitions import JobStateField
 
 
 class GetJobsSchema(Schema):
     """ Schema of the parameters accepted by the GET /jobs api resource """
     id = fields.Integer(validate=lambda id: id > 0)
-    state = JobStateField(validate=lambda state: state in db_mgr.job_state_ids.keys(), attribute="idState")
+    state = JobStateField(validate=lambda state: state is not None, attribute="idState")
     file_id = fields.Integer(validate=lambda id: id > 0, attribute="idFile")
     user_id = fields.Integer(validate=lambda id: id > 0, attribute="idUser")
     name = fields.String()
     can_be_printed = fields.Boolean(attribute="canBePrinted")
-    order_by_priority = fields.Boolean(default=False)
+    order_by_priority = fields.Boolean(missing=False)
+
+
+class GetJobsNotDoneSchema(Schema):
+    """ Schema of the parameters accepted by the GET /jobs/not_done api resource """
+    order_by_priority = fields.Boolean(missing=False)
+
+
+class DeleteJobSchema(Schema):
+    """ Schema of the parameters accepted by the DELETE /jobs/<job_id> api resource """
+    delete_file = fields.Boolean(missing=True)

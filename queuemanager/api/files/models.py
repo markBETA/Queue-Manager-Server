@@ -19,8 +19,6 @@ from ..definitions import TimeToSecondsField
 # FILE MODELS DECLARATION #
 ###########################
 
-# TODO: Add the file_information field in the file model
-
 file_model = api.model('File', {
     'id': fields.Integer,
     'name': fields.String,

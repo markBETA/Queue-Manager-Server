@@ -64,7 +64,7 @@ def create_app(name=__name__, override_config=None, init_db_static_values=False)
         socketio.init_app(app, logger=(app.config.get("DEBUG") > 0))
 
         # Register the API blueprint
-        from queuemanager.api import api_bp
-        app.register_blueprint(api_bp, url_prefix='/api')
+        from .api import init_app as api_init_app
+        api_init_app(app)
 
     return app
