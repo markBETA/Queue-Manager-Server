@@ -67,7 +67,7 @@ class File(Resource):
     @api.response(500, "Unable to read the data from the database")
     def get(self, file_id: int):
         """
-        Returns the file with id=file_id
+        Returns the file information with id=file_id
         """
         try:
             file = db.get_files(id=file_id)

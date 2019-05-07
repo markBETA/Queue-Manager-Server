@@ -10,35 +10,14 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from flask_restplus import marshal
 
-def test_get_printer_resource(http_client):
-    rv = http_client.get("/api/printer")
-    assert rv.status_code == 200
-    received_data = rv.json
-    del received_data['registered_at']
-    assert rv.json == {
-        'id': 1,
-        'name': 'default',
-        'model': {
-            'id': 2,
-            'name': 'Sigmax',
-            'width': 420.0,
-            'depth': 297.0,
-            'height': 210.0
-        },
-        'state': {
-            'id': 1,
-            'string': 'Offline',
-            'is_operational_state': False
-        },
-        'extruders': [
-            {'index': 0},
-            {'index': 1}
-        ],
-        'serial_number': '020.180622.3180',
-        'ip_address': None,
-        'total_success_prints': 0,
-        'total_failed_prints': 0,
-        'total_printing_seconds': 0.0,
-        'current_job': {}
-    }
+from queuemanager.api.printer.models import printer_model
+
+
+def test_get_printer_resource(db_manager, http_client):
+    printer = db_manager.get_printers(id=1)
+
+    r = http_client.get("/api/printer")
+    assert r.status_code == 200
+    assert r.json == marshal(printer, printer_model)

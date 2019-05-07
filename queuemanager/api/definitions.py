@@ -13,6 +13,9 @@ __status__ = "Development"
 from datetime import timedelta
 
 from flask_restplus import fields
+from marshmallow import fields as ma_fields
+
+from ..database import db_mgr
 
 
 ####################
@@ -33,18 +36,6 @@ def underscore_to_camel_case(s: str):
     return new_s
 
 
-def prepare_database_filters(filters: dict, allowed_filters: set):
-    prepared_filters = dict()
-
-    for key, value in filters.items():
-        if key in allowed_filters:
-            prepared_filters[underscore_to_camel_case(key)] = value
-        else:
-            raise KeyError("Invalid '{}' filter key".format(key))
-
-    return prepared_filters
-
-
 #######################
 # CUSTOM MODEL FIELDS #
 #######################
@@ -57,3 +48,12 @@ class TimeToSecondsField(fields.Raw):
     def format(self, value: timedelta):
         """ Encode a timedelta object to string """
         return value.total_seconds()
+
+
+class JobStateField(ma_fields.String):
+    """ Custom field for deserialize the printer state field """
+    def _deserialize(self, value, attr, data):
+        if value in db_mgr.job_state_ids.keys():
+            return db_mgr.job_state_ids[value]
+        else:
+            return None

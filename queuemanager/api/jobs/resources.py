@@ -17,7 +17,9 @@ from .definitions import api
 from .models import (
     job_model, edit_job_model, reorder_job_model
 )
-from ..definitions import prepare_database_filters
+from .parameter_schemas import (
+    GetJobsSchema, GetJobsNotDoneSchema, DeleteJobSchema
+)
 from ...database import db_mgr as db
 from ...database.manager.exceptions import (
     DBInternalError, DBManagerError, UniqueConstraintError
@@ -37,47 +39,44 @@ class Jobs(Resource):
     @api.doc(id="get_jobs")
     @api.param("id", "Get job with this ID", "query", **{"type": int})
     @api.param("state", "Get job(s) with this state", "query", **{"type": str})
-    @api.param("id_file", "Get job(s) with this file ID", "query", **{"type": int})
-    @api.param("id_user", "Get job(s) created by this user ID", "query", **{"type": int})
+    @api.param("file_id", "Get job(s) with this file ID", "query", **{"type": int})
+    @api.param("user_id", "Get job(s) created by this user ID", "query", **{"type": int})
     @api.param("name", "Get job with this name", "query", **{"type": str})
     @api.param("can_be_printed", "Get jobs that can be printed or not", "query", **{"type": bool})
-    @api.param("order_by_priority", "Get the jobs ordered by the priority index", "query", **{"type": bool})
+    @api.param("order_by_priority", "Get the jobs ordered by the priority index", "query", **{"type": bool, "default": False})
     @api.response(200, "Success", [job_model])
     @api.response(400, "Invalid query parameter")
+    @api.response(404, "The requested job don\'t exist")
     @api.response(500, "Unable to read the data from the database")
     def get(self):
         """
         Returns all jobs in the database after apply the filters set in the query
         """
-        allowed_filters = {"id", "state", "id_file", "id_user", "name", "can_be_printed", "order_by_priority"}
+        deserialized_parameters = GetJobsSchema().load(request.args)
 
-        try:
-            database_filters = prepare_database_filters(request.args, allowed_filters=allowed_filters)
-        except KeyError as e:
-            return {'message': str(e)}, 400
-
-        # Get the job state object from the state string set in the query
-        if "state" in database_filters:
-            try:
-                database_filters["idState"] = db.job_state_ids[database_filters["state"]]
-                del database_filters["state"]
-            except KeyError:
-                return {'message': 'Unknown state string'}, 400
+        if deserialized_parameters.errors:
+            return {
+                       "errors": deserialized_parameters.errors,
+                       "message": "Query parameters validation failed"
+                   }, 400
+        else:
+            deserialized_parameters = deserialized_parameters.data
 
         # Read the 'order_by_priority' param from the query
-        order_by_priority = False
-        if "order_by_priority" in request.args:
-            order_by_priority = request.args["order_by_priority"]
-            del database_filters["orderByPriority"]
+        order_by_priority = deserialized_parameters["order_by_priority"]
+        del deserialized_parameters["order_by_priority"]
 
         try:
-            jobs = db.get_jobs(order_by_priority, **database_filters)
+            jobs = db.get_jobs(order_by_priority, **deserialized_parameters)
         except DBInternalError:
             return {'message': 'Unable to read the data from the database'}, 500
         except DBManagerError as e:
             return {'message': str(e)}, 400
 
-        return marshal(jobs, job_model, skip_none=True), 200
+        if jobs is not None:
+            return marshal(jobs, job_model, skip_none=True), 200
+        else:
+            return {'message': 'The requested job don\'t exist'}, 404
 
     @api.doc(id="post_job")
     @api.param("name", "Job name", "formData", **{"type": str, "required": True})
@@ -140,7 +139,7 @@ class NotDoneJobs(Resource):
     """
 
     @api.doc(id="get_not_done_jobs")
-    @api.param("order_by_priority", "Get the jobs ordered by the priority index", "query", **{"type": bool})
+    @api.param("order_by_priority", "Get the jobs ordered by the priority index", "query", **{"type": bool, "default": False})
     @api.response(200, "Success", [job_model])
     @api.response(400, "Invalid query parameter")
     @api.response(500, "Unable to read the data from the database")
@@ -148,20 +147,18 @@ class NotDoneJobs(Resource):
         """
         Returns all jobs in the database after apply the filters set in the query
         """
-        allowed_filters = {"order_by_priority"}
+        deserialized_parameters = GetJobsNotDoneSchema().load(request.args)
+
+        if deserialized_parameters.errors:
+            return {
+                       "errors": deserialized_parameters.errors,
+                       "message": "Query parameters validation failed"
+                   }, 400
+        else:
+            deserialized_parameters = deserialized_parameters.data
 
         try:
-            prepare_database_filters(request.args, allowed_filters=allowed_filters)
-        except KeyError as e:
-            return {'message': str(e)}, 400
-
-        # Read the 'order_by_priority' param from the query
-        order_by_priority = False
-        if "order_by_priority" in request.args:
-            order_by_priority = request.args["order_by_priority"]
-
-        try:
-            jobs = db.get_not_done_jobs(order_by_priority)
+            jobs = db.get_not_done_jobs(deserialized_parameters["order_by_priority"])
         except DBInternalError:
             return {'message': 'Unable to read the data from the database'}, 500
         except DBManagerError as e:
@@ -205,7 +202,15 @@ class Job(Resource):
         """
         Delete the job with the specified ID
         """
-        delete_file = request.args.get("delete_file", default=True)
+        deserialized_parameters = DeleteJobSchema().load(request.args)
+
+        if deserialized_parameters.errors:
+            return {
+                       "errors": deserialized_parameters.errors,
+                       "message": "Query parameters validation failed"
+                   }, 400
+        else:
+            delete_file = deserialized_parameters.data["delete_file"]
 
         try:
             job = db.get_jobs(id=job_id)
@@ -231,7 +236,7 @@ class Job(Resource):
         return {'message': 'Job <{}> deleted from the database'.format(job.name)}, 200
 
     @api.doc(id="put_job")
-    @api.expect(edit_job_model)
+    @api.expect(edit_job_model, validate=True)
     @api.response(200, "Success", job_model)
     @api.response(404, "There is no job with this ID in the database")
     @api.response(500, "Unable to read the data from the database")
@@ -261,21 +266,21 @@ class Job(Resource):
         return marshal(updated_job, job_model, skip_none=True), 200
 
 
-@api.route("/reorder/<int:job_id>")
-class Job(Resource):
+@api.route("/<int:job_id>/reorder")
+class JobReorder(Resource):
     """
-    /jobs/reorder/<int:job_id>
+    /jobs/<int:job_id>/reorder
     """
 
     @api.doc(id="reorder_job")
-    @api.expect(reorder_job_model)
+    @api.expect(reorder_job_model, validate=True)
     @api.response(200, "Job reordered successfully")
     @api.response(404, "There is no job with this ID in the database")
     @api.response(500, "Unable to read the data from the database")
     @api.response(500, "Unable to edit the job from the database")
     def put(self, job_id: int):
         previous_job_id = request.json.get("previous_job_id")
-        if previous_job_id < 0:
+        if previous_job_id is not None and previous_job_id < 0:
             previous_job_id = None
 
         try:
