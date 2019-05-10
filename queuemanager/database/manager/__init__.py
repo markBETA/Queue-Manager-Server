@@ -11,14 +11,15 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 
+from sqlalchemy.orm import scoped_session
+
+from .exceptions import (
+    DBManagerError, InvalidParameter, DBInternalError, UniqueConstraintError
+)
 from .files import DBManagerFiles
 from .jobs import DBManagerJobs
 from .printers import DBManagerPrinters
 from .users import DBManagerUsers
-from .exceptions import (
-    DBManagerError, InvalidParameter, DBInternalError, UniqueConstraintError
-)
-from sqlalchemy.orm import Query, scoped_session
 
 
 class DBManager(DBManagerFiles, DBManagerJobs, DBManagerPrinters, DBManagerUsers):

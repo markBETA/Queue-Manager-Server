@@ -1,5 +1,5 @@
 """
-This file implements the way to run the server from the
+This file implements the way to run the server from the python interpreter
 """
 
 __author__ = "Marc Bermejo"

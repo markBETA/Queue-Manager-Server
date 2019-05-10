@@ -39,7 +39,7 @@ class Printer(Resource):
         except DBManagerError:
             return {'message': 'Unable to read the data from the database'}, 500
 
-        return marshal(printer, printer_model)
+        return marshal(printer, printer_model, skip_none=True)
 
 
 @api.route("/materials")

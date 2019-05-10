@@ -59,7 +59,7 @@ class PrinterNamespace(Namespace):
         """
         Event called when the printer is connected
         """
-        connection_allowed = self.socketio_manager.printer_connected(request.sid)
+        connection_allowed = self.socketio_manager.printer_connected(request.sid, request.remote_addr)
 
         if connection_allowed:
             current_app.logger.info("Printer connected")

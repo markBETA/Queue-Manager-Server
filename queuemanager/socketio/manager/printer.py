@@ -68,7 +68,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         if new_state_str != "Print finished" and job.state.stateString == "Finished":
             self.printer_namespace.emit_job_recovered(job, sid=printer.sid)
 
-    def printer_connected(self, sid):
+    def printer_connected(self, sid, ip_address):
         # Get the printer object
         printer = self.db_manager.get_printers(id=1)
 
@@ -78,7 +78,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
             return False
         else:
             # Set the sid as the printer sid
-            self.db_manager.update_printer(printer, sid=sid)
+            self.db_manager.update_printer(printer, sid=sid, ipAddress=ip_address)
             return True
 
     def printer_disconnected(self, sid):
@@ -88,6 +88,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         # Change the printer state to offline
         if printer.sid == sid:
             self.printer_state_updated("Offline")
+            self.db_manager.update_printer(printer, sid=None, ipAddress=None)
 
     def printer_initial_data(self, state, extruders_info):
         # Get the printer object
