@@ -16,7 +16,7 @@ from shutil import copyfile
 
 from flask_restplus import marshal
 
-from queuemanager.api.jobs.models import job_model
+from queuemanager.api.jobs.models import job_model, job_state_model
 
 
 def test_get_jobs(db_manager, http_client):
@@ -158,6 +158,14 @@ def test_get_not_done_jobs(db_manager, http_client):
     r = http_client.get("api/jobs/not_done?order_by_priority=true")
     assert r.status_code == 200
     assert r.json == marshal([jobs[0], jobs[2], jobs[1], jobs[3]], job_model, skip_none=True)
+
+
+def test_get_job_states(db_manager, http_client):
+    job_states = db_manager.get_job_states()
+
+    r = http_client.get("api/jobs/states")
+    assert r.status_code == 200
+    assert r.json == marshal(job_states, job_state_model)
 
 
 def test_get_job(db_manager, http_client):

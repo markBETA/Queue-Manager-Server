@@ -15,7 +15,7 @@ from flask_restplus import Resource, marshal
 
 from .definitions import api
 from .models import (
-    job_model, edit_job_model, reorder_job_model
+    job_model, edit_job_model, reorder_job_model, job_state_model
 )
 from .parameter_schemas import (
     GetJobsSchema, GetJobsNotDoneSchema, DeleteJobSchema
@@ -165,6 +165,27 @@ class NotDoneJobs(Resource):
             return {'message': str(e)}, 400
 
         return marshal(jobs, job_model, skip_none=True), 200
+
+
+@api.route("/states")
+class JobStates(Resource):
+    """
+    /jobs/states
+    """
+
+    @api.doc(id="get_jobs_states")
+    @api.response(200, "Success", [job_state_model])
+    @api.response(500, "Unable to read the data from the database")
+    def get(self):
+        """
+        Returns all the possible job states
+        """
+        try:
+            job_states = db.get_job_states()
+        except DBManagerError:
+            return {'message': 'Unable to read the data from the database'}, 500
+
+        return marshal(job_states, job_state_model), 200
 
 
 @api.route("/<int:job_id>")
