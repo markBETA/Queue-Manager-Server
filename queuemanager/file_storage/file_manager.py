@@ -11,11 +11,11 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 import json
-import math
 import os
 import warnings
 from datetime import timedelta
 
+import math
 from flask import current_app
 from werkzeug.utils import secure_filename
 
@@ -24,7 +24,7 @@ from .exceptions import (
 )
 from ..database import DBManager
 from ..database import (
-    User, File, Job
+    File, Job
 )
 
 
@@ -64,12 +64,12 @@ class FileManager(object):
         for i in range(len(list(file.fileData["extruders"]))):
             extruder = dict(file.fileData["extruders"][i])
             if bool(extruder["enabled"]):
-                # Get all the materials in the database of this type
+                # Get all the materials in the app_database of this type
                 materials_of_this_type = \
                     self.db_manager.get_printer_materials(type=str(extruder["material"]["type"]))
                 for material in materials_of_this_type:
                     allowed_materials.append((material, i))
-                # Get all the extruder types in the database of this nozzle diameter
+                # Get all the extruder types in the app_database of this nozzle diameter
                 extruders_of_this_size = \
                     self.db_manager.get_printer_extruder_types(nozzleDiameter=float(extruder["nozzle_size"]))
                 for extruder_type in extruders_of_this_size:
@@ -131,7 +131,7 @@ class FileManager(object):
 
         return extruder_estimated_needed_material
 
-    def init_app(self, app):
+    def init_app(self, app, create_upload_dir=True):
         self.app = app
 
         if (
@@ -143,7 +143,9 @@ class FileManager(object):
             )
 
         self.upload_dir = app.config.setdefault('FILE_MANAGER_UPLOAD_DIR ', './data/files')
-        self._create_upload_dir()
+
+        if create_upload_dir:
+            self._create_upload_dir()
 
     def retrieve_file_data(self, file: File):
         # Initialize the file data variable
@@ -265,13 +267,13 @@ class FileManager(object):
 
         return job
 
-    def save_file(self, file, user: User, analise_after_save: bool = False):
+    def save_file(self, file, user_id: int, analise_after_save: bool = False):
         # Check that the file is in gcode format
         if '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() != 'gcode':
             raise InvalidFileType("The file to save needs to be in gcode format")
 
-        # Create the file object in the database
-        file_obj = self.db_manager.insert_file(user, file.filename)
+        # Create the file object in the app_database
+        file_obj = self.db_manager.insert_file(user_id, file.filename)
 
         # Generate a random filename that will be used for saving it in the filesystem
         filename = str(file_obj.id) + '.gcode'
@@ -296,12 +298,17 @@ class FileManager(object):
         else:
             raise FilesystemError("File '{}' not found in the filesystem.".format(file.fullPath))
 
-        # Delete the file from the database
+        # Delete the file from the app_database
         self.db_manager.delete_files(id=file.id)
 
     @staticmethod
     def get_file_d(file: File):
         # Open the file from the full path
-        fd = open(file.fullPath, "r")
-
-        return fd
+        if os.path.exists(file.fullPath):
+            try:
+                fd = open(file.fullPath, "r")
+                return fd
+            except (OSError, IOError):
+                raise FilesystemError("Can't retrieve the file from filesystem.".format(file.fullPath))
+        else:
+            raise FilesystemError("File '{}' not found in the filesystem.".format(file.fullPath))

@@ -232,7 +232,7 @@ def test_on_analyze_job(socketio_client, db_manager, file_manager):
     assert received_events[0]['name'] == 'job_analyze_error'
     assert received_events[0]['args'][0] == {
         "job": {"id": 100, "name": None},
-        "message": "There is no job with this ID in the database",
+        "message": "There is no job with this ID in the app_database",
         "additional_info": None
     }
 
@@ -250,7 +250,7 @@ def test_on_enqueue_job(socketio_client, db_manager, file_manager):
     assert received_events[0]['name'] == 'job_enqueue_error'
     assert received_events[0]['args'][0] == {
         "job": {"id": 100, "name": None},
-        "message": "There is no job with this ID in the database",
+        "message": "There is no job with this ID in the app_database",
         "additional_info": None
     }
 

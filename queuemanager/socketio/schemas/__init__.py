@@ -1,5 +1,5 @@
 """
-This module defines the all the schemas for each table defined in the database module
+This module defines the all the schemas for each table defined in the app_database module
 """
 
 __author__ = "Marc Bermejo"

@@ -1,5 +1,5 @@
 """
-This module contains the database manager class.
+This module contains the app_database manager class.
 """
 
 __author__ = "Marc Bermejo"

@@ -137,6 +137,8 @@ class ClientNamespace(Namespace):
         """
         Event called when the client is connected
         """
+        # emit("session_key", str(uuid.uuid4()))
+
         current_app.logger.info("Client %s connected", request.sid)
 
     @staticmethod

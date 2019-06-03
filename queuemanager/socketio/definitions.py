@@ -12,9 +12,13 @@ __status__ = "Development"
 
 from flask_socketio import SocketIO
 
-
 ############################
 # SOCKET.IO SERVER MANAGER #
 ############################
 
 socketio = SocketIO()
+
+
+@socketio.on("connect")
+def connected():
+    return True

@@ -33,7 +33,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
             self.assign_job_to_printer(job, printer)
 
     def _update_printer_state(self, printer, new_state_str):
-        # Update the printer state in the database
+        # Update the printer state in the app_database
         self.db_manager.update_printer(printer, idState=self.db_manager.printer_state_ids[new_state_str])
         current_app.logger.info("Printer state changed. New state: {}".format(new_state_str))
 
@@ -41,7 +41,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         for extruder in extruders_info:
             # Init the dictionary of the values to update
             values_to_update = dict()
-            # Get the extruder object from the database
+            # Get the extruder object from the app_database
             extruder_obj = self.db_manager.get_printer_extruders(printer=printer, index=extruder["index"])[0]
 
             if "material" in extruder.keys():
@@ -148,7 +148,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
             self._check_jobs_in_queue(printer)
 
     def print_started(self, job_id):
-        # Get the job object from the database
+        # Get the job object from the app_database
         job_obj = self.db_manager.get_jobs(id=job_id)
 
         # Update the job state from 'Waiting' to 'Printing'
@@ -158,7 +158,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         self.client_namespace.emit_jobs_updated(broadcast=True)
 
     def print_finished(self, job_id, cancelled):
-        # Get the job object from the database
+        # Get the job object from the app_database
         job_obj = self.db_manager.get_jobs(id=job_id)
 
         # Update the job state from 'Waiting' to 'Printing'
@@ -172,7 +172,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         self.client_namespace.emit_jobs_updated(broadcast=True)
 
     def print_feedback(self, job_id, feedback_data):
-        # Get the job object from the database
+        # Get the job object from the app_database
         job_obj = self.db_manager.get_jobs(id=job_id)
 
         # Get the printer object
@@ -201,7 +201,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
         self.client_namespace.emit_printer_temperatures_updated(bed_temp, extruders_temp, broadcast=True)
 
     def job_progress_updated(self, id, progress, estimated_time_left, **_kwargs):
-        # Get the job object from the database
+        # Get the job object from the app_database
         job_obj = self.db_manager.get_jobs(id=id)
 
         current_app.logger.debug("New printing job (id={}) progress update -> progress: {}% / estimated_time_left: {}".

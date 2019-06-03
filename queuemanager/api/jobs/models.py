@@ -15,7 +15,6 @@ from flask_restplus import fields
 from .definitions import api
 from ..files.models import file_model
 from ..printer.models import printer_material_model, printer_extruder_type_model, printer_model
-from ..users.models import user_model
 
 ##########################
 # JOB MODELS DECLARATION #
@@ -55,7 +54,7 @@ job_model = api.model('Job', {
     'succeed': fields.Boolean,
     'state': fields.Nested(job_state_model),
     'file': fields.Nested(file_model),
-    'user': fields.Nested(user_model),
+    'user_id': fields.Integer(attribute="idUser"),
     'assigned_printer': fields.Nested(printer_model, skip_none=True),
     'allowed_materials': fields.Nested(job_allowed_material_model, as_list=True, skip_none=True),
     'allowed_extruder_types': fields.Nested(job_allowed_extruder_model, as_list=True, skip_none=True),

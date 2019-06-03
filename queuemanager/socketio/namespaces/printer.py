@@ -66,6 +66,9 @@ class PrinterNamespace(Namespace):
         else:
             current_app.logger.info("Printer already connected. New connection rejected")
 
+        # if connection_allowed:
+        #     emit("session_key", str(uuid.uuid4()))
+
         return connection_allowed
 
     def on_disconnect(self):

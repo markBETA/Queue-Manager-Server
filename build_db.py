@@ -1,5 +1,5 @@
 """
-This module can build a new database according to the structure defined in the 'database' module.
+This module can build a new app_database according to the structure defined in the 'app_database' module.
 """
 
 __author__ = "Marc Bermejo"

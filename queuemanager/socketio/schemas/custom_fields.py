@@ -53,6 +53,7 @@ class PrinterExtruderTypeField(fields.Float):
             return None
         elif isinstance(value, float):
             extruder_types = db_mgr.get_printer_extruder_types(nozzleDiameter=value)
+
             if extruder_types:
                 return extruder_types[0]
             else:

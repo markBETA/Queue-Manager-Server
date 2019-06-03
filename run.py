@@ -23,7 +23,7 @@ parser.add_argument('--port', type=int, default=5000,
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    app = create_app(__name__, init_db_static_values=True)
+    app = create_app(__name__, init_db_manager_values=True)
 
     from queuemanager.socketio import socketio
     socketio.run(app, debug=(app.config.get("DEBUG") > 0), host=args.host, port=args.port)

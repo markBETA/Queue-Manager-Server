@@ -14,19 +14,19 @@ setup(
     install_requires=[
         'Flask>=1.0',
         'flask-sqlalchemy',
-        'marshmallow==2.15.6',
-        'flask-marshmallow',
+        'sqlalchemy',
+        'marshmallow',
         'flask-socketio',
         'flask-cors',
         'flask-restplus',
-        'sqlalchemy',
-        'marshmallow-sqlalchemy',
+        'flask-jwt-extended',
+        'cryptography',
         'click',
         'werkzeug',
         'eventlet',
-        'requests',
-        'flask-jwt-extended',
-        'pymysql'
+        'psycopg2',
+        'redis',
+        'parse'
     ]
 )
 
