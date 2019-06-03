@@ -12,7 +12,7 @@ __status__ = "Development"
 
 from werkzeug.security import generate_password_hash
 
-from queuemanager.database.models import (
+from .models import (
     JobState, PrinterModel, PrinterState, PrinterExtruderType, PrinterMaterial,
     PrinterExtruder, Printer, User
 )
@@ -74,8 +74,10 @@ def printer_extruder_initial_values():
 
 def printer_initial_values():
     return [
-        Printer(idModel=2, idState=1, name="default", serialNumber="020.180622.3180",
-                apiKey="b82a38ead630438abf1bc56a2c6aa281")
+        Printer(
+            idModel=2, idState=1, name="default", serialNumber="020.180622.3180",
+            apiKey="b82a38ead630438abf1bc56a2c6aa281"
+        )
     ]
 
 
@@ -85,7 +87,9 @@ def printer_initial_values():
 
 def user_initial_values():
     return [
-        User(username="bcn3d", password=generate_password_hash("1234"), isAdmin=True),
+        User(
+            username="bcn3d", fullname="BCN3D Admin User", email="cloudservices@bcn3dtechnologies.com",
+        ),
     ]
 
 

@@ -10,10 +10,10 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from queuemanager.database import (
+from ... import (
     PrinterModel, PrinterState, PrinterExtruderType, PrinterMaterial, PrinterExtruder, Printer
 )
-from queuemanager.database import (
+from ... import (
     printer_model_initial_values, printer_state_initial_values, printer_extruder_type_initial_values,
     printer_material_initial_values, printer_extruder_initial_values, printer_initial_values
 )

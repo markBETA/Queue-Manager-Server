@@ -58,7 +58,7 @@ class DBManagerFiles(DBManagerBase):
 
     def get_files(self, **kwargs):
         # Create the query object
-        query = File.query
+        query = File.query.order_by(File.id.asc())
 
         # Filter by the given kwargs
         for key, value in kwargs.items():

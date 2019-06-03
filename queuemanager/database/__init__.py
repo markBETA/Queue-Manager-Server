@@ -52,6 +52,7 @@ def init_db_command():
 def init_app(app):
     """Initializes the app context for the database operation."""
     db.init_app(app)
+    db.engine.pool._use_threadlocal = True
     app.cli.add_command(init_db_command)
 
 

@@ -17,13 +17,14 @@ from .table_names import (
     PRINTER_MODELS_TABLE, PRINTER_STATES_TABLE, PRINTER_EXTRUDER_TYPES_TABLE,
     PRINTER_MATERIALS_TABLE, PRINTER_EXTRUDERS_TABLE, PRINTERS_TABLE, JOBS_TABLE
 )
-from ..definitions import db_conn as db
+from ..definitions import db_conn as db, bind_key
 
 
 class PrinterModel(db.Model):
     """
     Definition of table PRINTER_MODELS_TABLE that contains the printer known models.
     """
+    __bind_key__ = bind_key
     __tablename__ = PRINTER_MODELS_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -42,6 +43,7 @@ class PrinterState(db.Model):
     """
     Definition of table PRINTER_STATES_TABLE that contains the printer known states.
     """
+    __bind_key__ = bind_key
     __tablename__ = PRINTER_STATES_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -58,6 +60,7 @@ class PrinterExtruderType(db.Model):
     """
     Definition of table PRINTER_EXTRUDER_TYPES_TABLE that contains the printer known extruder types.
     """
+    __bind_key__ = bind_key
     __tablename__ = PRINTER_EXTRUDER_TYPES_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -76,6 +79,7 @@ class PrinterMaterial(db.Model):
     """
     Definition of table PRINTER_MATERIALS_TABLE that contains all known printable materials.
     """
+    __bind_key__ = bind_key
     __tablename__ = PRINTER_MATERIALS_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -97,6 +101,7 @@ class PrinterExtruder(db.Model):
     """
     Definition of table PRINTER_EXTRUDERS_TABLE that contains printer extruders information.
     """
+    __bind_key__ = bind_key
     __tablename__ = PRINTER_EXTRUDERS_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -119,6 +124,7 @@ class Printer(db.Model):
     """
     Definition of table PRINTERS_TABLE that contains the printers information.
     """
+    __bind_key__ = bind_key
     __tablename__ = PRINTERS_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)

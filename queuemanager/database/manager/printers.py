@@ -30,7 +30,7 @@ class DBManagerPrinterModels(DBManagerBase):
     """
     def get_printer_models(self, **kwargs):
         # Create the query object
-        query = PrinterModel.query
+        query = PrinterModel.query.order_by(PrinterModel.id.asc())
 
         # Filter by the given kwargs
         for key, value in kwargs.items():
@@ -52,7 +52,7 @@ class DBManagerPrinterStates(DBManagerBase):
     """
     def get_printer_states(self, **kwargs):
         # Create the query object
-        query = PrinterState.query
+        query = PrinterState.query.order_by(PrinterState.id.asc())
 
         # Filter by the given kwargs
         for key, value in kwargs.items():
@@ -74,7 +74,7 @@ class DBManagerPrinterExtruderTypes(DBManagerBase):
     """
     def get_printer_extruder_types(self, **kwargs):
         # Create the query object
-        query = PrinterExtruderType.query
+        query = PrinterExtruderType.query.order_by(PrinterExtruderType.id.asc())
 
         # Filter by the given kwargs
         for key, value in kwargs.items():
@@ -96,7 +96,7 @@ class DBManagerPrinterMaterials(DBManagerBase):
     """
     def get_printer_materials(self, **kwargs):
         # Create the query object
-        query = PrinterMaterial.query
+        query = PrinterMaterial.query.order_by(PrinterMaterial.id.asc())
 
         # Filter by the given kwargs
         for key, value in kwargs.items():
@@ -118,7 +118,7 @@ class DBManagerPrinterExtruders(DBManagerBase):
     """
     def get_printer_extruders(self, **kwargs):
         # Create the query object
-        query = PrinterExtruder.query
+        query = PrinterExtruder.query.order_by(PrinterExtruder.id.asc())
 
         # Filter by the given kwargs
         for key, value in kwargs.items():
@@ -177,7 +177,7 @@ class DBManagerPrinters(DBManagerPrinterModels, DBManagerPrinterStates, DBManage
 
     def get_printers(self, **kwargs):
         # Create the query object
-        query = Printer.query
+        query = Printer.query.order_by(Printer.id.asc())
 
         # Filter by the given kwargs
         for key, value in kwargs.items():

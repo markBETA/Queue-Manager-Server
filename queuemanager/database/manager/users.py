@@ -23,21 +23,21 @@ class DBManagerUsers(DBManagerBase):
     """
     This class implements the database manager class for the user operations
     """
-    def insert_user(self, username: str, password: str, is_admin: bool = False):
+    def insert_user(self, username: str, fullname: str, email: str):
         # Check parameter values
         if username == "":
             raise InvalidParameter("The 'username' parameter can't be an empty string")
-        if password == "":
-            raise InvalidParameter("The 'password' parameter can't be an empty string")
+        if fullname == "":
+            raise InvalidParameter("The 'fullname' parameter can't be an empty string")
+        if email == "":
+            raise InvalidParameter("The 'email' parameter can't be an empty string")
 
         # Create the new user object
         user = User(
             username=username,
-            isAdmin=is_admin,
+            fullname=fullname,
+            email=email
         )
-
-        # Hash the password and save the value
-        user.hash_password(password)
 
         # Add the new row to the database
         self.add_row(user)
@@ -55,7 +55,7 @@ class DBManagerUsers(DBManagerBase):
         # Filter by the given kwargs
         for key, value in kwargs.items():
             if hasattr(User, key):
-                if key in ("id", "username"):
+                if key in ("id", "username", "email"):
                     return self.execute_query(query.filter_by(**{key: value}), use_list=False)
                 else:
                     query = query.filter_by(**{key: value})
@@ -65,28 +65,24 @@ class DBManagerUsers(DBManagerBase):
         # Return all the filtered items
         return self.execute_query(query)
 
-    def delete_users(self, **kwargs):
-        # Initialize the deleted users counter
-        deleted_users_count = 0
-
-        # Get all the users with this parameters
-        users = self.get_users(**kwargs)
-
-        # Check the type of data that we obtained from the last call
-        if users is None:
-            return deleted_users_count
-        elif isinstance(users, User):
-            # Delete the retrieved user
-            self.del_row(users)
-            deleted_users_count = 1
-        else:
-            # Delete all the retrieved users
-            for user in users:
-                self.del_row(user)
-                deleted_users_count += 1
+    def delete_user(self, user: User):
+        # Delete the row at the database
+        self.del_row(user)
 
         # Commit the changes to the database
         if self.autocommit:
             self.commit_changes()
 
-        return deleted_users_count
+    def update_user(self, user: User, **kwargs):
+        # Modify the specified user fields
+        for key, value in kwargs.items():
+            if hasattr(User, key):
+                setattr(user, key, value)
+            else:
+                raise InvalidParameter("Invalid '{}' parameter".format(key))
+
+        # Commit the changes to the database
+        if self.autocommit:
+            self.commit_changes()
+
+        return user

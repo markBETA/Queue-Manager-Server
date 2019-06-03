@@ -1,0 +1,5 @@
+__pycache__/*
+manager/__pycache__/*
+models/__pycache__/*
+tests/test.db
+tests/manager/files/*

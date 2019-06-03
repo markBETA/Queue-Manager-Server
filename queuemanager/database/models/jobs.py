@@ -16,13 +16,14 @@ from .table_names import (
     JOB_STATES_TABLE, JOB_ALLOWED_MATERIALS_TABLE, JOB_ALLOWED_EXTRUDERS_TABLE, JOB_EXTRUDERS_TABLE,
     JOBS_TABLE, PRINTER_MATERIALS_TABLE, PRINTER_EXTRUDER_TYPES_TABLE, FILES_TABLE, USERS_TABLE
 )
-from ..definitions import db_conn as db
+from ..definitions import db_conn as db, bind_key
 
 
 class JobState(db.Model):
     """
     Definition of the table JOB_STATES_TABLE that contains the job known states.
     """
+    __bind_key__ = bind_key
     __tablename__ = JOB_STATES_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -38,6 +39,7 @@ class JobAllowedMaterial(db.Model):
     """
     Definition of the table JOB_ALLOWED_MATERIALS that contains the job allowed materials.
     """
+    __bind_key__ = bind_key
     __tablename__ = JOB_ALLOWED_MATERIALS_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -57,6 +59,7 @@ class JobAllowedExtruder(db.Model):
     """
     Definition of the table JOB_ALLOWED_EXTRUDERS that contains the job allowed extruder types.
     """
+    __bind_key__ = bind_key
     __tablename__ = JOB_ALLOWED_EXTRUDERS_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -77,6 +80,7 @@ class JobExtruder(db.Model):
     """
     Definition of the table JOB_EXTRUDERS_TABLE that contains the job extruders information
     """
+    __bind_key__ = bind_key
     __tablename__ = JOB_EXTRUDERS_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -100,6 +104,7 @@ class Job(db.Model):
     """
     Definition of the table JOBS_TABLE that contains all jobs of the queue
     """
+    __bind_key__ = bind_key
     __tablename__ = JOBS_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)

@@ -15,13 +15,14 @@ from datetime import datetime
 from .table_names import (
     FILES_TABLE, USERS_TABLE
 )
-from ..definitions import db_conn as db
+from ..definitions import db_conn as db, bind_key
 
 
 class File(db.Model):
     """
     Definition of the table JOBS_TABLE that contains all the uploaded GCODE files
     """
+    __bind_key__ = bind_key
     __tablename__ = FILES_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)

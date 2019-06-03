@@ -36,4 +36,9 @@ class UniqueConstraintError(DBManagerError):
     """
     This exception will be raise when the UNIQUE constraint fails
     """
-    pass
+    def __init__(self, msg, column):
+        self.msg = msg
+        self.column = column
+
+    def __str__(self):
+        return self.msg

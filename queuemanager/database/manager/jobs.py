@@ -30,7 +30,7 @@ class DBManagerJobStates(DBManagerBase):
     """
     def get_job_states(self, **kwargs):
         # Create the query object
-        query = JobState.query
+        query = JobState.query.order_by(JobState.id.asc())
 
         # Filter by the given kwargs
         for key, value in kwargs.items():
@@ -83,7 +83,7 @@ class DBManagerJobAllowedMaterials(DBManagerBase):
 
     def get_job_allowed_materials(self, job: Job, extruder_index: int = None):
         # Create the query object
-        query = JobAllowedMaterial.query.filter_by(idJob=job.id)
+        query = JobAllowedMaterial.query.filter_by(idJob=job.id).order_by(JobAllowedMaterial.id.asc())
 
         if extruder_index is not None:
             # Get all the allowed materials of the job by the extruder index
@@ -99,7 +99,7 @@ class DBManagerJobAllowedMaterials(DBManagerBase):
 
     def get_jobs_by_material(self, material: PrinterMaterial, extruder_index: int = None):
         # Create the query object
-        query = JobAllowedMaterial.query.filter_by(idMaterial=material.id)
+        query = JobAllowedMaterial.query.filter_by(idMaterial=material.id).order_by(JobAllowedMaterial.id.asc())
 
         if extruder_index is not None:
             # Get all the allowed materials of the job by the extruder index
@@ -151,7 +151,7 @@ class DBManagerJobAllowedExtruderTypes(DBManagerBase):
 
     def get_job_allowed_extruder_types(self, job: Job, extruder_index: int = None):
         # Create the query object
-        query = JobAllowedExtruder.query.filter_by(idJob=job.id)
+        query = JobAllowedExtruder.query.filter_by(idJob=job.id).order_by(JobAllowedExtruder.id.asc())
 
         if extruder_index is not None:
             # Get all the allowed materials of the job by the extruder index
@@ -167,7 +167,8 @@ class DBManagerJobAllowedExtruderTypes(DBManagerBase):
 
     def get_jobs_by_extruder_type(self, extruder_type: PrinterExtruderType, extruder_index: int = None):
         # Create the query object
-        query = JobAllowedExtruder.query.filter_by(idExtruderType=extruder_type.id)
+        query = JobAllowedExtruder.query.filter_by(idExtruderType=extruder_type.id).\
+            order_by(JobAllowedExtruder.id.asc())
 
         if extruder_index is not None:
             # Get all the allowed materials of the job by the extruder index
@@ -229,7 +230,7 @@ class DBManagerJobExtruders(DBManagerBase):
 
     def get_job_extruders(self, job: Job, extruder_index: int = None):
         # Create the query object
-        query = JobExtruder.query.filter_by(idJob=job.id)
+        query = JobExtruder.query.filter_by(idJob=job.id).order_by(JobExtruder.id.asc())
 
         if extruder_index is not None:
             # Get all the extruders of the job by the extruder index
@@ -320,7 +321,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
         if order_by_priority:
             query = Job.query.order_by(Job.priority_i.asc())
         else:
-            query = Job.query
+            query = Job.query.order_by(Job.id.asc())
 
         # Filter by the given kwargs
         for key, value in kwargs.items():
@@ -340,7 +341,7 @@ class DBManagerJobs(DBManagerJobStates, DBManagerJobAllowedMaterials,
         if order_by_priority:
             query = Job.query.order_by(Job.priority_i.asc())
         else:
-            query = Job.query
+            query = Job.query.order_by(Job.id.asc())
 
         # Update the query for filtering all the jobs with the done state
         query = query.join(Job.state).filter(JobState.id != self.job_state_ids["Done"])

@@ -13,7 +13,7 @@ __status__ = "Development"
 
 from datetime import timedelta
 
-from queuemanager.database.initial_values import (
+from ...initial_values import (
     printer_model_initial_values, printer_state_initial_values, printer_extruder_type_initial_values,
     printer_material_initial_values, printer_extruder_initial_values, printer_initial_values
 )

@@ -46,10 +46,3 @@ USERS_TABLE = 'users'
 ###############
 
 FILES_TABLE = 'files'
-
-
-################
-# QUEUE TABLES #
-################
-
-QUEUES_TABLE = 'queues'

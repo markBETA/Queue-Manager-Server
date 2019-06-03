@@ -12,7 +12,7 @@ __status__ = "Development"
 
 from sqlalchemy.event import listens_for
 
-from queuemanager.database.definitions import db_conn as db
+from .definitions import db_conn as db
 from .initial_values import (
     printer_material_initial_values, printer_state_initial_values, printer_extruder_type_initial_values,
     printer_model_initial_values, printer_extruder_initial_values, printer_initial_values,

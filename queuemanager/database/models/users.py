@@ -12,35 +12,28 @@ __status__ = "Development"
 
 from datetime import datetime
 
-from werkzeug.security import generate_password_hash, check_password_hash
-
 from .table_names import (
     USERS_TABLE
 )
-from ..definitions import db_conn as db
+from ..definitions import db_conn as db, bind_key
 
 
 class User(db.Model):
     """
     Definition of table USERS_TABLE that contains all users
     """
+    __bind_key__ = bind_key
     __tablename__ = USERS_TABLE
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     username = db.Column(db.String(256), unique=True, nullable=False)
-    password = db.Column(db.String(256), nullable=False)
-    isAdmin = db.Column(db.Boolean, nullable=False, default=False)
+    fullname = db.Column(db.String(256))
+    email = db.Column(db.String(256), unique=True, nullable=False)
     registeredOn = db.Column(db.DateTime, default=datetime.now, nullable=False)
 
     jobs = db.relationship('Job', back_populates='user', cascade="all, delete-orphan")
     files = db.relationship('File', back_populates='user', cascade="all, delete-orphan")
 
-    def hash_password(self, password):
-        self.password = generate_password_hash(password)
-
-    def verify_password(self, password):
-        return check_password_hash(self.password, password)
-
     def __repr__(self):
-        return '[{}]<id: {} / username: {} / isAdmin: {}>'.format(self.__tablename__, self.id,
-                                                                  self.username, self.isAdmin)
+        return '[{}]<id: {} / username: {} / email: {}>'.format(self.__tablename__, self.id,
+                                                                self.username, self.email)

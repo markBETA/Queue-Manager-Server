@@ -11,8 +11,9 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from flask import current_app
+from parse import parse
 from sqlalchemy import exc
-from sqlalchemy.orm import Query, scoped_session
+from sqlalchemy.orm import Query, Session, scoped_session
 
 from .exceptions import (
     UniqueConstraintError, DBInternalError
@@ -40,6 +41,15 @@ class DBManagerBase(object):
     def _restore_autocommit(self):
         self.autocommit = self._initial_autocommit
 
+    @staticmethod
+    def _detect_unique_constraint_error_column(e):
+        parsed_data = parse('duplicate key value violates unique constraint "{constraint}"\n'
+                            'DETAIL:  Key ({field})=({input}) already exists.\n', str(e.orig))
+        if parsed_data:
+            return parsed_data["field"]
+        else:
+            return None
+
     def update_session(self, session: scoped_session):
         self.db_session = session
         self.set_session_object()
@@ -51,11 +61,13 @@ class DBManagerBase(object):
         # Update the database with error catching
         try:
             self.db_session.commit()
+            self.db_session.flush()
         except exc.IntegrityError as e:
             self.db_session.rollback()
             current_app.logger.error("Database integrity error detected. Rolling back. Details: %s", str(e))
-            if "UNIQUE constraint failed" in str(e):
-                raise UniqueConstraintError(str(e))
+            unique_duplicated_column = self._detect_unique_constraint_error_column(e)
+            if unique_duplicated_column:
+                raise UniqueConstraintError(str(e), column=unique_duplicated_column)
             else:
                 raise DBInternalError(str(e))
         except exc.SQLAlchemyError as e:
@@ -66,9 +78,16 @@ class DBManagerBase(object):
 
     def add_row(self, row_obj):
         self.db_session.add(row_obj)
+        self.commit_changes()
+        self.db_session.refresh(row_obj)
         current_app.logger.info("Object '%s' added to the database", str(row_obj))
 
     def del_row(self, row_obj):
+        object_session = Session.object_session(row_obj)
+        if object_session != self.db_session:
+            object_session.expunge(row_obj)
+            self.db_session.add(row_obj)
+
         self.db_session.delete(row_obj)
         current_app.logger.info("Object '%s' deleted from the database", str(row_obj))
 
