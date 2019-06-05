@@ -13,6 +13,8 @@ __status__ = "Development"
 from datetime import timedelta
 from shutil import copyfile
 
+from sqlalchemy.orm import Session
+
 from queuemanager.socketio import client_namespace
 
 
@@ -207,7 +209,7 @@ def test_emit_job_progress_updated(socketio_client, db_manager):
     }
 
 
-def test_on_analyze_job(socketio_client, db_manager, file_manager):
+def test_on_analyze_job(socketio_client, client_session_key, db_manager, file_manager):
     class FlaskFile(object):
         def __init__(self, filename, full_path):
             self.filename = filename
@@ -224,7 +226,8 @@ def test_on_analyze_job(socketio_client, db_manager, file_manager):
     file = file_manager.save_file(helper_file, user, analise_after_save=False)
     db_manager.insert_job("test-job", file, user)
 
-    socketio_client.emit("analyze_job", {"job_id": 100}, namespace="/client")
+    data = {"session_key": client_session_key, "job_id": 100}
+    socketio_client.emit("analyze_job", data, namespace="/client")
 
     received_events = socketio_client.get_received("/client")
 
@@ -232,17 +235,46 @@ def test_on_analyze_job(socketio_client, db_manager, file_manager):
     assert received_events[0]['name'] == 'job_analyze_error'
     assert received_events[0]['args'][0] == {
         "job": {"id": 100, "name": None},
-        "message": "There is no job with this ID in the app_database",
+        "message": "There is no job with this ID in the socketio_printer",
         "additional_info": None
     }
 
+    job_no_header = db_manager.get_jobs(name="test-job-no-header")
+    data = {"session_key": client_session_key, "job_id": job_no_header.id}
+    socketio_client.emit("analyze_job", data, namespace="/client")
 
-def test_on_enqueue_job(socketio_client, db_manager, file_manager):
+    received_events = socketio_client.get_received("/client")
+
+    assert len(received_events) == 1
+    assert received_events[0]['name'] == 'job_analyze_error'
+    assert received_events[0]['args'][0] == {
+        "job": {'id': 1, 'name': 'test-job-no-header'},
+        "message": "The file data can't be empty",
+        "additional_info": None
+    }
+
+    job = db_manager.get_jobs(name="test-job")
+    data = {"session_key": client_session_key, "job_id": job.id}
+    Session.object_session(job)
+    socketio_client.emit("analyze_job", data, namespace="/client")
+
+    received_events = socketio_client.get_received("/client")
+    job = db_manager.get_jobs(name="test-job")
+
+    assert len(received_events) == 2
+    assert received_events[0]['name'] == 'job_analyze_done'
+    assert received_events[0]['args'][0] == {"id": job.id, "name": job.name}
+    assert received_events[1]['name'] == 'jobs_updated'
+    assert received_events[1]['args'] == [None]
+
+
+def test_on_enqueue_job(socketio_client, client_session_key, db_manager, file_manager):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test-file", "/home/Marc/test")
     db_manager.insert_job("test-job", file, user)
 
-    socketio_client.emit("enqueue_job", {"job_id": 100}, namespace="/client")
+    data = {"session_key": client_session_key, "job_id": 100}
+    socketio_client.emit("enqueue_job", data, namespace="/client")
 
     received_events = socketio_client.get_received("/client")
 
@@ -250,16 +282,47 @@ def test_on_enqueue_job(socketio_client, db_manager, file_manager):
     assert received_events[0]['name'] == 'job_enqueue_error'
     assert received_events[0]['args'][0] == {
         "job": {"id": 100, "name": None},
-        "message": "There is no job with this ID in the app_database",
+        "message": "There is no job with this ID in the socketio_printer",
         "additional_info": None
     }
 
-    socketio_client.emit("enqueue_job", {"job_id": 1}, namespace="/client")
+    initial_data = {
+        "state": "Ready",
+        "extruders_info": [
+            {
+                "material_type": "PLA",
+                "extruder_nozzle_diameter": 0.6,
+                "index": 0
+            },
+            {
+                "material_type": "ABS",
+                "extruder_nozzle_diameter": 0.4,
+                "index": 1
+            },
+        ]
+    }
+
+    from ...definitions import socketio_mgr
+    socketio_mgr.printer_initial_data(**initial_data)
+    socketio_client.get_received("/client")
+    assert db_manager.get_printers(id=1).state.stateString == "Ready"
+
+    job = db_manager.get_jobs(name="test-job")
+    data = {"session_key": client_session_key, "job_id": job.id}
+    socketio_client.emit("enqueue_job", data, namespace="/client")
 
     received_events = socketio_client.get_received("/client")
+    job = db_manager.get_jobs(name="test-job")
 
     assert len(received_events) == 2
     assert received_events[0]['name'] == 'job_enqueue_done'
-    assert received_events[0]['args'][0] == {"id": 1, "name": "test-job"}
+    assert received_events[0]['args'][0] == {"id": job.id, "name": job.name}
     assert received_events[1]['name'] == 'jobs_updated'
     assert received_events[1]['args'] == [None]
+
+    received_events = socketio_client.get_received("/printer")
+
+    assert len(received_events) == 1
+    assert received_events[0]['name'] == 'print_job'
+    assert received_events[0]['args'][0] == {"id": job.id, "name": job.name, "file_id": job.file.id}
+    assert db_manager.get_printers(id=1).idCurrentJob == job.id

@@ -2,6 +2,7 @@ import datetime
 import os
 
 import pytest
+from flask_jwt_extended import create_access_token, decode_token
 from sqlalchemy.orm import close_all_sessions
 
 from ... import create_app
@@ -17,6 +18,8 @@ TEST_DB_URI = 'sqlite:///' + TEST_DB_PATH
 GCODE_STORAGE_PATH = './files/'
 
 os.chdir(os.path.dirname(__file__))
+
+_client_session_key = None
 
 
 @pytest.fixture(scope='session')
@@ -69,7 +72,7 @@ def app(request):
 
 @pytest.fixture(scope='function')
 def db(app, request):
-    """Session-wide test app_database."""
+    """Session-wide test socketio_printer."""
     if os.path.exists(TEST_DB_PATH):
         os.unlink(TEST_DB_PATH)
 
@@ -88,7 +91,7 @@ def db(app, request):
 
 @pytest.fixture(scope='function')
 def session(db, request):
-    """Creates a new app_database session for a test."""
+    """Creates a new socketio_printer session for a test."""
     db.session = db.create_scoped_session()
 
     def teardown():
@@ -101,7 +104,7 @@ def session(db, request):
 
 @pytest.fixture(scope='function')
 def db_manager(session):
-    """Creates a new app_database DBManager instance for a test."""
+    """Creates a new socketio_printer DBManager instance for a test."""
     db_mgr.update_session(session)
     db_mgr.init_static_values()
     db_mgr.init_printers_state()
@@ -140,10 +143,41 @@ def file_manager(app, db_manager, request):
 
 
 @pytest.fixture(scope='function')
-def socketio_client(app, session, db_manager, request):
+def socketio_client(app, session, db_manager, jwt_blacklist_manager, request):
+    global _client_session_key
+
     socketio_client = socketio.test_client(app)
-    socketio_client.connect("/client")
-    socketio_client.connect("/printer")
+
+    access_token = create_access_token({
+        "type": "printer",
+        "id": 1,
+        "serial_number": "020.238778.0823"
+    })
+    jwt_blacklist_manager.add_access_token(decode_token(access_token))
+    auth_header = {"Authorization": "Bearer " + access_token}
+
+    socketio_client.connect("/printer", headers=auth_header)
+
+    access_token = create_access_token({
+        "type": "user",
+        "id": 1,
+        "is_admin": True
+    })
+    jwt_blacklist_manager.add_access_token(decode_token(access_token))
+    auth_header = {"Authorization": "Bearer " + access_token}
+
+    socketio_client.connect("/client", headers=auth_header)
+
+    _client_session_key = None
+
+    for received_event in socketio_client.get_received('/client'):
+        if received_event['name'] == 'session_key':
+            _client_session_key = received_event['args'][0]
+
+    if _client_session_key is None:
+        raise RuntimeError("No session key received after successful connection.")
+
+    socketio_client.get_received('/printer')
 
     db_manager.update_session(session)
 
@@ -153,7 +187,14 @@ def socketio_client(app, session, db_manager, request):
         socketio_client.disconnect()
 
     request.addfinalizer(teardown)
+
     return socketio_client
+
+
+@pytest.fixture(scope='function')
+def client_session_key():
+    global _client_session_key
+    return _client_session_key
 
 
 @pytest.fixture(scope='function')

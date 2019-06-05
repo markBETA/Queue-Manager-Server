@@ -127,7 +127,7 @@ def test_get_jobs(db_manager, jwt_blacklist_manager, http_client):
     assert r.json == marshal([jobs[2], jobs[1]], job_model, skip_none=True)
 
 
-def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_client):
+def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_client, client_session_key):
     user = db_manager.get_users(id=1)
 
     access_token = create_access_token({
@@ -141,14 +141,17 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     r = http_client.post("api/jobs")
     assert r.status_code == 401
     assert r.json == {"message": "Missing Authorization Header"}
+    assert not socketio_client.get_received('/client')
 
     r = http_client.post("api/jobs", headers={"Authorization": "Bearer "}, json={})
     assert r.status_code == 422
     assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+    assert not socketio_client.get_received('/client')
 
     r = http_client.post("api/jobs", headers=auth_header)
     assert r.status_code == 422
     assert r.json == {'message': 'Only user access tokens are allowed.'}
+    assert not socketio_client.get_received('/client')
 
     access_token = create_access_token({
         "type": "user",
@@ -161,6 +164,7 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     r = http_client.post("api/jobs", headers=auth_header)
     assert r.status_code == 422
     assert r.json == {'message': "Can't retrieve the user ID from the access token."}
+    assert not socketio_client.get_received('/client')
 
     access_token = create_access_token({
         "type": "user",
@@ -176,6 +180,7 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     r = http_client.post('/api/jobs', headers=auth_header, data=wrong_data)
     assert r.status_code == 400
     assert r.json == {'message': 'No file attached with the request.'}
+    assert not socketio_client.get_received('/client')
 
     wrong_data = {
         'gcode': (BytesIO(open("./test-file.gcode").read().encode('utf-8')), 'test_file.gcode'),
@@ -183,6 +188,7 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     r = http_client.post('/api/jobs', headers=auth_header, data=wrong_data)
     assert r.status_code == 400
     assert r.json == {'message': 'No job name specified with the request.'}
+    assert not socketio_client.get_received('/client')
 
     access_token_fail = create_access_token({
         "type": "user",
@@ -199,6 +205,7 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     r = http_client.post('/api/jobs', headers=auth_header_fail, data=data)
     assert r.status_code == 422
     assert r.json == {'message': "There isn't any registered user with the ID from the access token."}
+    assert not socketio_client.get_received('/client')
 
     data = {
         'gcode': (BytesIO(open("./test-file.gcode").read().encode('utf-8')), 'test_file.gcode'),
@@ -206,8 +213,11 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     }
 
     r = http_client.post('/api/jobs', headers=auth_header, data=data)
+    received_events = socketio_client.get_received('/client')
     assert r.status_code == 201
     assert r.json == marshal(db_manager.get_jobs(id=1), job_model, skip_none=True)
+    assert len(received_events) == 1
+    assert received_events[0]['name'] == 'jobs_updated'
 
     files = os.listdir('files/')
     assert len(files) == 1
@@ -223,6 +233,7 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     r = http_client.post('/api/jobs', headers=auth_header, data=data)
     assert r.status_code == 409
     assert r.json == {'message': 'Job name already exists.'}
+    assert not socketio_client.get_received('/client')
 
 
 def test_get_not_done_jobs(db_manager, jwt_blacklist_manager, http_client):

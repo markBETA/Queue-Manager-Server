@@ -24,7 +24,7 @@ REDIS_SERVER_HOST = 'redis.dev.server'
 REDIS_SERVER_PORT = 6379
 TOKEN_BLACKLIST_REDIS_DB = 0
 
-JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(minutes=30)
+JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(seconds=15)
 JWT_REFRESH_TOKEN_EXPIRES = datetime.timedelta(days=30)
 JWT_BLACKLIST_ENABLED = True
 JWT_BLACKLIST_TOKEN_CHECKS = ['access', 'refresh']

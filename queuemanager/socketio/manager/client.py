@@ -30,7 +30,7 @@ class ClientNamespaceManager(SocketIOManagerBase):
             return
 
         if job is None:
-            self.client_namespace.emit_job_analyze_error(Job(id=job_id), "There is no job with this ID in the app_database")
+            self.client_namespace.emit_job_analyze_error(Job(id=job_id), "There is no job with this ID in the socketio_printer")
             return
 
         try:
@@ -45,7 +45,7 @@ class ClientNamespaceManager(SocketIOManagerBase):
             self.client_namespace.emit_job_analyze_error(job, str(e))
             return
         except DBManagerError:
-            self.client_namespace.emit_job_analyze_error(job, "Can't save the retrieved file header at the app_database")
+            self.client_namespace.emit_job_analyze_error(job, "Can't save the retrieved file header at the socketio_printer")
             return
 
         self.client_namespace.emit_job_analyze_done(job)
@@ -59,7 +59,7 @@ class ClientNamespaceManager(SocketIOManagerBase):
             return
 
         if job is None:
-            self.client_namespace.emit_job_enqueue_error(Job(id=job_id), "There is no job with this ID in the app_database")
+            self.client_namespace.emit_job_enqueue_error(Job(id=job_id), "There is no job with this ID in the socketio_printer")
             return
 
         try:

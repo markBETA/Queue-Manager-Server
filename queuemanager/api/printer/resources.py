@@ -45,7 +45,7 @@ class PrinterMaterials(Resource):
     """
     @api.doc(id="get_printer_materials")
     @api.response(200, "Success", [printer_material_model])
-    @api.response(500, "Unable to read the data from the app_database")
+    @api.response(500, "Unable to read the data from the socketio_printer")
     @jwt_required
     def get(self):
         """
@@ -63,7 +63,7 @@ class PrinterExtruderTypes(Resource):
     """
     @api.doc(id="get_printer_extruder_types")
     @api.response(200, "Success", [printer_extruder_type_model])
-    @api.response(500, "Unable to read the data from the app_database")
+    @api.response(500, "Unable to read the data from the socketio_printer")
     @jwt_required
     def get(self):
         """

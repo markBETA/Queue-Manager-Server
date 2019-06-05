@@ -15,22 +15,22 @@ from datetime import timedelta
 from queuemanager.socketio import printer_namespace
 
 
-def test_printer_connected(socketio_client):
-    received_events = socketio_client.get_received("/client")
+def test_printer_connected(socketio_printer):
+    received_events = socketio_printer.get_received("/client")
 
     assert len(received_events) == 0
 
 
-def test_printer_disconnected(socketio_client, db_manager):
+def test_printer_disconnected(socketio_printer, db_manager):
     printer = db_manager.get_printers(id=1)
 
-    db_manager.update_printer(printer, idState=db_manager.printer_state_ids["Ready"], sid=socketio_client.sid)
+    db_manager.update_printer(printer, idState=db_manager.printer_state_ids["Ready"], sid=socketio_printer.sid)
 
     assert printer.idState == db_manager.printer_state_ids["Ready"]
 
-    socketio_client.disconnect("/printer")
+    socketio_printer.disconnect("/printer")
 
-    received_events = socketio_client.get_received("/client")
+    received_events = socketio_printer.get_received("/client")
 
     assert len(received_events) == 2
     assert received_events[0]['name'] == 'printer_data_updated'
@@ -39,14 +39,14 @@ def test_printer_disconnected(socketio_client, db_manager):
     assert received_events[1]['args'] == [None]
 
 
-def test_emit_print_job(socketio_client, db_manager):
+def test_emit_print_job(socketio_printer, db_manager):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "/home/Marc/test")
     job = db_manager.insert_job("test", file, user)
 
     printer_namespace.emit_print_job(job, broadcast=True)
 
-    received_events = socketio_client.get_received(namespace="/printer")
+    received_events = socketio_printer.get_received(namespace="/printer")
 
     assert len(received_events) == 1
     assert received_events[0]['name'] == 'print_job'
@@ -63,7 +63,7 @@ def test_emit_print_job(socketio_client, db_manager):
             assert False
 
 
-def test_emit_job_recovered(socketio_client, db_manager):
+def test_emit_job_recovered(socketio_printer, db_manager):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "/home/Marc/test")
     job = db_manager.insert_job("test", file, user)
@@ -75,7 +75,7 @@ def test_emit_job_recovered(socketio_client, db_manager):
 
     printer_namespace.emit_job_recovered(job, broadcast=True)
 
-    received_events = socketio_client.get_received(namespace="/printer")
+    received_events = socketio_printer.get_received(namespace="/printer")
 
     assert len(received_events) == 1
     assert received_events[0]['name'] == 'job_recovered'
@@ -94,7 +94,7 @@ def test_emit_job_recovered(socketio_client, db_manager):
             assert False
 
 
-def test_on_initial_data(socketio_client, db_manager):
+def test_on_initial_data(socketio_printer, printer_session_key, db_manager):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "/home/Marc/test")
     job = db_manager.insert_job("test", file, user)
@@ -105,6 +105,7 @@ def test_on_initial_data(socketio_client, db_manager):
     db_manager.set_printing_job(job)
 
     initial_data = {
+        "session_key": printer_session_key,
         "state": "Ready",
         "extruders_info": [
             {
@@ -124,9 +125,9 @@ def test_on_initial_data(socketio_client, db_manager):
 
     assert printer.state.stateString == "Offline"
 
-    socketio_client.emit("initial_data", initial_data, namespace="/printer")
+    socketio_printer.emit("initial_data", initial_data, namespace="/printer")
 
-    received_events = socketio_client.get_received("/client")
+    received_events = socketio_printer.get_received("/client")
 
     assert len(received_events) == 4
     assert received_events[0]['name'] == 'printer_data_updated'
@@ -153,7 +154,7 @@ def test_on_initial_data(socketio_client, db_manager):
     assert received_events[3]['name'] == 'jobs_updated'
     assert received_events[3]['args'] == [None]
 
-    received_events = socketio_client.get_received("/printer")
+    received_events = socketio_printer.get_received("/printer")
 
     assert len(received_events) == 1
     assert received_events[0]['name'] == 'job_recovered'
@@ -175,13 +176,14 @@ def test_on_initial_data(socketio_client, db_manager):
             assert False
 
 
-def test_on_state_updated(socketio_client, db_manager):
+def test_on_state_updated(socketio_printer, printer_session_key, db_manager):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "/home/Marc/test")
     job = db_manager.insert_job("test", file, user)
     db_manager.enqueue_created_job(job)
 
     state_data = {
+        "session_key": printer_session_key,
         "state": "Ready"
     }
 
@@ -189,9 +191,9 @@ def test_on_state_updated(socketio_client, db_manager):
 
     assert printer.state.stateString == "Offline"
 
-    socketio_client.emit("state_updated", state_data, namespace="/printer")
+    socketio_printer.emit("state_updated", state_data, namespace="/printer")
 
-    received_events = socketio_client.get_received("/client")
+    received_events = socketio_printer.get_received("/client")
 
     assert len(received_events) == 2
     assert received_events[0]['name'] == 'printer_data_updated'
@@ -199,7 +201,7 @@ def test_on_state_updated(socketio_client, db_manager):
     assert received_events[1]['name'] == 'jobs_updated'
     assert received_events[1]['args'] == [None]
 
-    received_events = socketio_client.get_received("/printer")
+    received_events = socketio_printer.get_received("/printer")
 
     assert len(received_events) == 1
     assert received_events[0]['name'] == 'print_job'
@@ -213,8 +215,9 @@ def test_on_state_updated(socketio_client, db_manager):
     assert printer.current_job.id == job.id
 
 
-def test_on_extruders_updated(socketio_client, db_manager):
+def test_on_extruders_updated(socketio_printer, printer_session_key, db_manager):
     initial_data = {
+        "session_key": printer_session_key,
         "extruders_info": [
             {
                 "material_type": "PLA",
@@ -232,9 +235,9 @@ def test_on_extruders_updated(socketio_client, db_manager):
     printer = db_manager.get_printers(id=1)
     db_manager.update_printer(printer, idState=db_manager.printer_state_ids["Ready"])
 
-    socketio_client.emit("extruders_updated", initial_data, namespace="/printer")
+    socketio_printer.emit("extruders_updated", initial_data, namespace="/printer")
 
-    received_events = socketio_client.get_received("/client")
+    received_events = socketio_printer.get_received("/client")
 
     assert len(received_events) == 2
     assert received_events[0]['name'] == 'printer_data_updated'
@@ -263,7 +266,7 @@ def test_on_extruders_updated(socketio_client, db_manager):
             assert False
 
 
-def test_on_print_started(socketio_client, db_manager):
+def test_on_print_started(socketio_printer, printer_session_key, db_manager):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "/home/Marc/test")
     job = db_manager.insert_job("test", file, user)
@@ -273,12 +276,13 @@ def test_on_print_started(socketio_client, db_manager):
     db_manager.assign_job_to_printer(printer, job)
 
     job_data = {
+        "session_key": printer_session_key,
         "job_id": job.id,
     }
 
-    socketio_client.emit("print_started", job_data, namespace="/printer")
+    socketio_printer.emit("print_started", job_data, namespace="/printer")
 
-    received_events = socketio_client.get_received("/client")
+    received_events = socketio_printer.get_received("/client")
 
     assert len(received_events) == 1
     assert received_events[0]['name'] == 'jobs_updated'
@@ -289,7 +293,7 @@ def test_on_print_started(socketio_client, db_manager):
     assert job.state.stateString == "Printing"
 
 
-def test_on_print_finished(socketio_client, db_manager):
+def test_on_print_finished(socketio_printer, printer_session_key, db_manager):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "/home/Marc/test")
     job = db_manager.insert_job("test", file, user)
@@ -300,13 +304,14 @@ def test_on_print_finished(socketio_client, db_manager):
     db_manager.set_printing_job(job)
 
     job_data = {
+        "session_key": printer_session_key,
         "job_id": job.id,
         "cancelled": True,
     }
 
-    socketio_client.emit("print_finished", job_data, namespace="/printer")
+    socketio_printer.emit("print_finished", job_data, namespace="/printer")
 
-    received_events = socketio_client.get_received("/client")
+    received_events = socketio_printer.get_received("/client")
 
     assert len(received_events) == 2
     assert received_events[0]['name'] == 'job_progress_updated'
@@ -326,7 +331,7 @@ def test_on_print_finished(socketio_client, db_manager):
     assert job.interrupted is True
 
 
-def test_on_print_feedback(socketio_client, db_manager):
+def test_on_print_feedback(socketio_printer, printer_session_key, db_manager):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "/home/Marc/test")
     job = db_manager.insert_job("test", file, user)
@@ -338,6 +343,7 @@ def test_on_print_feedback(socketio_client, db_manager):
     db_manager.set_finished_job(job)
 
     feedback_data = {
+        "session_key": printer_session_key,
         "job_id": job.id,
         "feedback_data": {
             "success": True,
@@ -346,13 +352,15 @@ def test_on_print_feedback(socketio_client, db_manager):
         }
     }
 
-    socketio_client.emit("print_feedback", feedback_data, namespace="/printer")
+    socketio_printer.emit("print_feedback", feedback_data, namespace="/printer")
 
-    received_events = socketio_client.get_received("/client")
+    received_events = socketio_printer.get_received("/client")
 
     assert len(received_events) == 2
     assert received_events[0]['name'] == 'printer_data_updated'
     assert received_events[0]['args'][0]['total_success_prints'] == 1
+    assert received_events[0]['args'][0]['total_failed_prints'] == 0
+    assert received_events[0]['args'][0]['total_printing_seconds'] > 0
     assert received_events[1]['name'] == 'jobs_updated'
     assert received_events[1]['args'] == [None]
 
@@ -361,7 +369,7 @@ def test_on_print_feedback(socketio_client, db_manager):
     assert job.state.stateString == "Done"
 
 
-def test_on_printer_temperatures_updated(socketio_client, db_manager):
+def test_on_printer_temperatures_updated(socketio_printer, printer_session_key, db_manager):
     temp_data = {
         "bed_temp": 55.1,
         "extruders_temp": [
@@ -375,17 +383,19 @@ def test_on_printer_temperatures_updated(socketio_client, db_manager):
             }
         ]
     }
+    data_to_send = temp_data.copy()
+    data_to_send["session_key"] = printer_session_key
 
-    socketio_client.emit("printer_temperatures_updated", temp_data, namespace="/printer")
+    socketio_printer.emit("printer_temperatures_updated", data_to_send, namespace="/printer")
 
-    received_events = socketio_client.get_received("/client")
+    received_events = socketio_printer.get_received("/client")
 
     assert len(received_events) == 1
     assert received_events[0]['name'] == 'printer_temperatures_updated'
     assert received_events[0]['args'][0] == temp_data
 
 
-def test_on_job_progress_updated(socketio_client, db_manager):
+def test_on_job_progress_updated(socketio_printer, printer_session_key, db_manager):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "/home/Marc/test")
     job = db_manager.insert_job("test", file, user)
@@ -401,9 +411,12 @@ def test_on_job_progress_updated(socketio_client, db_manager):
         "estimated_seconds_left": 61.1
     }
 
-    socketio_client.emit("job_progress_updated", progress_data, namespace="/printer")
+    data_to_send = progress_data.copy()
+    data_to_send["session_key"] = printer_session_key
 
-    received_events = socketio_client.get_received("/client")
+    socketio_printer.emit("job_progress_updated", data_to_send, namespace="/printer")
+
+    received_events = socketio_printer.get_received("/client")
 
     expected_progress_data = progress_data.copy()
     expected_progress_data["name"] = "test"

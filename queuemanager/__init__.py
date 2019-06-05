@@ -34,10 +34,6 @@ def create_app(name=__name__, override_config=None, init_db_manager_values=False
     from flask import Flask
     app = Flask(name, instance_relative_config=True)
 
-    if "flask-cors" in enabled_modules:
-        from flask_cors import CORS
-        CORS(app)
-
     if override_config is None:
         # Load the instance config, if it exists, when not testing
         app.config.from_pyfile('config.py', silent=True)
@@ -56,33 +52,40 @@ def create_app(name=__name__, override_config=None, init_db_manager_values=False
     else:
         app.logger.setLevel(INFO)
 
-    # Init file manager
-    if "file-storage" in enabled_modules:
-        from .file_storage import file_mgr
-        file_mgr.init_app(app, create_upload_dir=override_config is None)
-
-    # Init the blacklist manager
-    if "blacklist-manager" in enabled_modules:
-        from .blacklist_manager import jwt_blacklist_manager
-        jwt_blacklist_manager.init_app(app)
-
-    # Set the exception handlers
-    if "error-handlers" in enabled_modules:
-        from .error_handlers import set_exception_handlers
-        set_exception_handlers(app)
+    app.logger.info("Loading server modules...")
 
     with app.app_context():
-        # Register the app_database commands
+        # Init Flask-CORS plugin
+        if "flask-cors" in enabled_modules:
+            from flask_cors import CORS
+            CORS(app)
+
+        # Register the socketio_printer commands
         if "app-database" in enabled_modules:
             from .database import init_app as db_init_app
             db_init_app(app)
 
-        # Init the app_database manager
+        # Init the socketio_printer manager
         if init_db_manager_values and "app-database" in enabled_modules:
             from .database import db_mgr
             db_mgr.init_static_values()
             db_mgr.init_printers_state()
             db_mgr.init_jobs_can_be_printed()
+
+        # Init file manager
+        if "file-storage" in enabled_modules:
+            from .file_storage import file_mgr
+            file_mgr.init_app(app, create_upload_dir=override_config is None)
+
+        # Init the blacklist manager
+        if "blacklist-manager" in enabled_modules:
+            from .blacklist_manager import jwt_blacklist_manager
+            jwt_blacklist_manager.init_app(app)
+
+        # Set the exception handlers
+        if "error-handlers" in enabled_modules:
+            from .error_handlers import set_exception_handlers
+            set_exception_handlers(app)
 
         # Init the socket.io interface
         if "socketio" in enabled_modules:
@@ -93,5 +96,7 @@ def create_app(name=__name__, override_config=None, init_db_manager_values=False
         if "api" in enabled_modules:
             from .api import init_app as api_init_app
             api_init_app(app)
+
+    app.logger.info("Server modules loaded")
 
     return app

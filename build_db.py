@@ -1,5 +1,5 @@
 """
-This module can build a new app_database according to the structure defined in the 'app_database' module.
+This module can build a new socketio_printer according to the structure defined in the 'socketio_printer' module.
 """
 
 __author__ = "Marc Bermejo"

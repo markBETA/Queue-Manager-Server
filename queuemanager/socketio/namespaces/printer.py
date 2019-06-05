@@ -10,9 +10,12 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from flask import current_app, request
+import uuid
+
+from flask import current_app, request, session
 from flask_socketio import Namespace, emit
 
+from ..definitions import socketio_auth_required
 from ..schemas import (
     EmitPrintJobSchema, EmitJobRecoveredSchema, OnInitialDataSchema, OnStateUpdatedSchema, OnExtrudersUpdatedSchema,
     OnPrintStartedSchema, OnPrintFinishedSchema, OnPrintFeedbackSchema, OnPrinterTemperaturesUpdatedSchema,
@@ -59,15 +62,17 @@ class PrinterNamespace(Namespace):
         """
         Event called when the printer is connected
         """
-        connection_allowed = self.socketio_manager.printer_connected(request.sid, request.remote_addr)
+        connection_allowed = self.socketio_manager.printer_connected(request.sid, request.remote_addr) and \
+            session["identity"].get("type") == "printer"
 
         if connection_allowed:
             current_app.logger.info("Printer connected")
         else:
             current_app.logger.info("Printer already connected. New connection rejected")
 
-        # if connection_allowed:
-        #     emit("session_key", str(uuid.uuid4()))
+        if connection_allowed:
+            session["key"] = str(uuid.uuid4())
+            emit("session_key", session["key"])
 
         return connection_allowed
 
@@ -79,6 +84,7 @@ class PrinterNamespace(Namespace):
 
         current_app.logger.info("Printer disconnected")
 
+    @socketio_auth_required
     def on_initial_data(self, data: dict):
         """
         Listen for the event 'initial_data'. The data expected is defined by
@@ -92,6 +98,7 @@ class PrinterNamespace(Namespace):
             # TODO: Send error notification
             pass
 
+    @socketio_auth_required
     def on_state_updated(self, data: dict):
         """
         Listen for the event 'state_updated'. The data expected is defined by
@@ -105,6 +112,7 @@ class PrinterNamespace(Namespace):
             # TODO: Send error notification
             pass
 
+    @socketio_auth_required
     def on_extruders_updated(self, data: dict):
         """
         Listen for the event 'extruders_updated'. The data expected is defined by
@@ -118,6 +126,7 @@ class PrinterNamespace(Namespace):
             # TODO: Send error notification
             pass
 
+    @socketio_auth_required
     def on_print_started(self, data: dict):
         """
         Listen for the event 'print_started'. The data expected is defined by
@@ -131,6 +140,7 @@ class PrinterNamespace(Namespace):
             # TODO: Send error notification
             pass
 
+    @socketio_auth_required
     def on_print_finished(self, data: dict):
         """
         Listen for the event 'print_finished'. The data expected is defined by
@@ -144,6 +154,7 @@ class PrinterNamespace(Namespace):
             # TODO: Send error notification
             pass
 
+    @socketio_auth_required
     def on_print_feedback(self, data: dict):
         """
         Listen for the event 'print_finished'. The data expected is defined by
@@ -157,6 +168,7 @@ class PrinterNamespace(Namespace):
             # TODO: Send error notification
             pass
 
+    @socketio_auth_required
     def on_printer_temperatures_updated(self, data: dict):
         """
         Listen for the event 'printer_temperatures_updated'. The data expected is defined by
@@ -170,6 +182,7 @@ class PrinterNamespace(Namespace):
             # TODO: Send error notification
             pass
 
+    @socketio_auth_required
     def on_job_progress_updated(self, data: dict):
         """
         Listen for the event 'job_progress_updated'. The data expected is defined by

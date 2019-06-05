@@ -24,7 +24,7 @@ from .exceptions import (
 )
 from ..database import DBManager
 from ..database import (
-    File, Job
+    File, Job, User
 )
 
 
@@ -64,12 +64,12 @@ class FileManager(object):
         for i in range(len(list(file.fileData["extruders"]))):
             extruder = dict(file.fileData["extruders"][i])
             if bool(extruder["enabled"]):
-                # Get all the materials in the app_database of this type
+                # Get all the materials in the socketio_printer of this type
                 materials_of_this_type = \
                     self.db_manager.get_printer_materials(type=str(extruder["material"]["type"]))
                 for material in materials_of_this_type:
                     allowed_materials.append((material, i))
-                # Get all the extruder types in the app_database of this nozzle diameter
+                # Get all the extruder types in the socketio_printer of this nozzle diameter
                 extruders_of_this_size = \
                     self.db_manager.get_printer_extruder_types(nozzleDiameter=float(extruder["nozzle_size"]))
                 for extruder_type in extruders_of_this_size:
@@ -267,16 +267,16 @@ class FileManager(object):
 
         return job
 
-    def save_file(self, file, user_id: int, analise_after_save: bool = False):
+    def save_file(self, file, user: User, analise_after_save: bool = False):
         # Check that the file is in gcode format
         if '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() != 'gcode':
             raise InvalidFileType("The file to save needs to be in gcode format")
 
-        # Create the file object in the app_database
-        file_obj = self.db_manager.insert_file(user_id, file.filename)
+        # Create the file object in the socketio_printer
+        file_obj = self.db_manager.insert_file(user, file.filename)
 
         # Generate a random filename that will be used for saving it in the filesystem
-        filename = str(file_obj.id) + '.gcode'
+        filename = str(file_obj.id)
         full_path = os.path.join(self.app.config['FILE_MANAGER_UPLOAD_DIR'], secure_filename(filename))
 
         # Save the file to the filesystem
@@ -298,8 +298,8 @@ class FileManager(object):
         else:
             raise FilesystemError("File '{}' not found in the filesystem.".format(file.fullPath))
 
-        # Delete the file from the app_database
-        self.db_manager.delete_files(id=file.id)
+        # Delete the file from the socketio_printer
+        self.db_manager.delete_file(file)
 
     @staticmethod
     def get_file_d(file: File):
