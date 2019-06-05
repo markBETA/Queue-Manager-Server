@@ -46,3 +46,9 @@ def test_file_db_manager(db_manager):
 
     file = db_manager.get_files(id=another_file.id)
     assert file is None
+
+    another_file = _add_file(db_manager, user)
+    db_manager.delete_file(another_file)
+
+    file = db_manager.get_files(id=another_file.id)
+    assert file is None

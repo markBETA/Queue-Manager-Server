@@ -10,12 +10,12 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from .test_file_models import add_file
+from .test_user_models import add_user
 from ... import (
     JobState, JobAllowedMaterial, JobAllowedExtruder, JobExtruder, Job, PrinterMaterial, PrinterExtruderType
 )
 from ... import job_state_initial_values
-from .test_file_models import add_file
-from .test_user_models import add_user
 
 
 def add_job_allowed_materials(session, job, allowed_materials):

@@ -11,11 +11,11 @@ __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from .base_class import DBManagerBase
-from ..models import (
-    User, File
-)
 from .exceptions import (
     InvalidParameter
+)
+from ..models import (
+    User
 )
 
 

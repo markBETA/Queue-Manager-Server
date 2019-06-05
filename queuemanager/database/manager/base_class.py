@@ -35,12 +35,6 @@ class DBManagerBase(object):
     def init_static_values(self):
         pass
 
-    def _set_autocommit(self, value: bool):
-        self.autocommit = value
-
-    def _restore_autocommit(self):
-        self.autocommit = self._initial_autocommit
-
     @staticmethod
     def _detect_unique_constraint_error_column(e):
         parsed_data = parse('duplicate key value violates unique constraint "{constraint}"\n'

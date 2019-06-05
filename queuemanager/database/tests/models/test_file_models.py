@@ -10,10 +10,10 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from .test_user_models import add_user
 from ... import (
     File
 )
-from .test_user_models import add_user
 
 
 def add_file(session, user):

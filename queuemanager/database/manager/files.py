@@ -44,9 +44,6 @@ class DBManagerFiles(DBManagerBase):
             else:
                 raise InvalidParameter("Invalid '{}' parameter".format(key))
 
-        # Link the user with the file
-        file.user = user
-
         # Add the new row to the database
         self.add_row(file)
 
@@ -86,6 +83,14 @@ class DBManagerFiles(DBManagerBase):
             self.commit_changes()
 
         return file
+
+    def delete_file(self, file: File):
+        # Delete the row at the database
+        self.del_row(file)
+
+        # Commit the changes to the database
+        if self.autocommit:
+            self.commit_changes()
 
     def delete_files(self, **kwargs):
         # Initialize the deleted files counter

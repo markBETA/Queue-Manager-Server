@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from sqlalchemy.orm import close_all_sessions
 
 try:
@@ -47,7 +46,7 @@ def app(request):
 
 @pytest.fixture(scope='function')
 def db(app, request):
-    """Session-wide test app_database."""
+    """Session-wide test socketio_printer."""
     if os.path.exists(TEST_DB_PATH):
         os.unlink(TEST_DB_PATH)
 
@@ -66,7 +65,7 @@ def db(app, request):
 
 @pytest.fixture(scope='function')
 def session(db, request):
-    """Creates a new app_database session for a test."""
+    """Creates a new socketio_printer session for a test."""
     db.session = db.create_scoped_session()
 
     def teardown():
@@ -79,7 +78,7 @@ def session(db, request):
 
 @pytest.fixture(scope='function')
 def db_manager(session):
-    """Creates a new app_database DBManager instance for a test."""
+    """Creates a new socketio_printer DBManager instance for a test."""
     db_mgr.update_session(session)
     db_mgr.init_static_values()
     db_mgr.init_printers_state()

@@ -10,11 +10,12 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from datetime import datetime
+
 from ... import (
     User
 )
 from ... import user_initial_values
-from datetime import datetime
 
 
 def add_user(session):
