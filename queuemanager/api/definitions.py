@@ -12,10 +12,45 @@ __status__ = "Development"
 
 from datetime import timedelta
 
-from flask_restplus import fields
+from flask import Blueprint
+from flask_restplus import Api, fields
 from marshmallow import fields as ma_fields
 
 from ..database import db_mgr
+
+#########################
+# API GLOBAL DEFINITION #
+#########################
+
+api_bp = Blueprint('api', __name__)
+
+api = Api(
+    title='Queue Manager API',
+    version='0.1',
+    description='This API manages all the data operations for the queue manager',
+    authorizations={
+        'user_refresh_jwt': {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization",
+        },
+        'user_access_jwt': {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization",
+        },
+        'printer_refresh_jwt': {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization",
+        },
+        'printer_access_jwt': {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization",
+        }
+    },
+)
 
 
 ####################

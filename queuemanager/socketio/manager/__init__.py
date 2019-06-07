@@ -1,5 +1,5 @@
 """
-This module contains the database manager class.
+This module contains the socketio_printer manager class.
 """
 
 __author__ = "Marc Bermejo"

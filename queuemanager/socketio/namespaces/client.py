@@ -10,9 +10,12 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from flask import current_app, request
-from flask_socketio import Namespace, emit
+import uuid
 
+from flask import current_app, request, session
+from flask_socketio import Namespace, emit, disconnect
+
+from ..definitions import socketio_auth_required
 from ..schemas import (
     EmitJobAnalyzeDoneSchema, EmitJobAnalyzeErrorSchema, EmitJobEnqueueDoneSchema, EmitJobEnqueueErrorSchema,
     EmitPrinterDataUpdatedSchema, EmitPrinterTemperaturesUpdatedSchema, EmitJobProgressUpdatedSchema,
@@ -132,11 +135,17 @@ class ClientNamespace(Namespace):
             # TODO: Send error notification
             pass
 
-    @staticmethod
-    def on_connect():
+    def on_connect(self):
         """
         Event called when the client is connected
         """
+        if session["identity"].get("type") != "user":
+            current_app.logger.info("Detected invalid access token type. Disconnecting SID '{}'".format(request.sid))
+            disconnect()
+
+        session["key"] = str(uuid.uuid4())
+        emit("session_key", session["key"], broadcast=False, namespace=self.namespace)
+
         current_app.logger.info("Client %s connected", request.sid)
 
     @staticmethod
@@ -146,6 +155,7 @@ class ClientNamespace(Namespace):
         """
         current_app.logger.info("Client %s disconnected", request.sid)
 
+    @socketio_auth_required
     def on_analyze_job(self, data: dict):
         """
         Listen for the event 'analyze_job'. The data expected is defined by
@@ -162,6 +172,7 @@ class ClientNamespace(Namespace):
                 job = None
             self.emit_job_analyze_error(job, "Corrupted event payload", deserialized_data.errors)
 
+    @socketio_auth_required
     def on_enqueue_job(self, data: dict):
         """
         Listen for the event 'enqueue_job'. The data expected is defined by

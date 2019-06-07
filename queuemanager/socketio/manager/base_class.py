@@ -1,5 +1,5 @@
 """
-This module contains the database manager base class.
+This module contains the socketio_printer manager base class.
 """
 
 __author__ = "Marc Bermejo"
@@ -15,7 +15,7 @@ from ...database import DBManager, Job, Printer
 
 class SocketIOManagerBase(object):
     """
-    This class implements the database manager base class
+    This class implements the socketio_printer manager base class
     """
 
     def __init__(self, db_manager: DBManager = None):

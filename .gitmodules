@@ -1,0 +1,6 @@
+[submodule "queuemanager/blacklist_manager"]
+	path = queuemanager/blacklist_manager
+	url = https://github.com/BCN3D/Queue-Manager-Blacklist-Manager.git
+[submodule "queuemanager/database"]
+	path = queuemanager/database
+	url = https://github.com/BCN3D/Queue-Manager-App-Database.git

@@ -11,11 +11,10 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from .definitions import socketio
+from .definitions import socketio, socketio_mgr
 from .manager import SocketIOManager
 from .namespaces import ClientNamespace, PrinterNamespace
 
-socketio_mgr = SocketIOManager()
 client_namespace = ClientNamespace(socketio_mgr, "/client")
 printer_namespace = PrinterNamespace(socketio_mgr, "/printer")
 socketio_mgr.set_client_namespace(client_namespace)
