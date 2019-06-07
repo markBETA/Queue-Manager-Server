@@ -1,0 +1,7 @@
+Version 0.0.1
+=============
+    * Added the socket.io functionality for users (front-end) and printers.
+    * Added the database manager and the defined models
+    * Added the blacklist manager to control the active tokens used for authenticate
+    * Added the api resources for both the front-end and the printers.
+    * Added a full unit test suite of the server
