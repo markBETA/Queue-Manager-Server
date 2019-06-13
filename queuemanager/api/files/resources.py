@@ -28,6 +28,7 @@ class File(Resource):
     /files/<file_id>
     """
     @api.doc(id="get_file")
+    @api.doc(security="printer_access_jwt")
     @api.response(200, "Success")
     @api.response(401, "Unauthorized resource access")
     @api.response(404, "Can't find any file with this ID in the database")
@@ -72,6 +73,7 @@ class File(Resource):
     /files/<file_id>/info
     """
     @api.doc(id="get_file_info")
+    @api.doc(security="printer_access_jwt")
     @api.response(200, "Success", file_model)
     @api.response(401, "Unauthorized resource access")
     @api.response(404, "Can't find any file with this ID in the database")

@@ -98,12 +98,13 @@ def create_app(name=__name__, override_config=None, init_db_manager_values=False
             api_init_app(app)
 
         # Init Flask-CORS plugin
-        if "flask-cors" in enabled_modules and cors_allowed_origins is not None:
+        if "flask-cors" in enabled_modules:
+            kwargs = dict()
+            if cors_allowed_origins is not None:
+                kwargs["resources"] = {r"/api/*": {"origins": cors_allowed_origins}}
+
             from flask_cors import CORS
-            CORS(
-                app,
-                resources={r"/api/*": {"origins": cors_allowed_origins}}
-            )
+            CORS(app, **kwargs)
 
     app.logger.info("Server modules loaded")
 

@@ -6,6 +6,7 @@ import datetime
 import os
 
 DEBUG = int(os.getenv('DEBUG', 0))
+ENV = "development" if DEBUG > 0 else "production"
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'my_secret_key')
 

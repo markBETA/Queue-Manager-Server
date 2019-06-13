@@ -39,6 +39,7 @@ class Jobs(Resource):
     /jobs
     """
     @api.doc(id="get_jobs")
+    @api.doc(security="user_access_jwt")
     @api.param("id", "Get job with this ID", "query", **{"type": int})
     @api.param("state", "Get job(s) with this state", "query", **{"type": str})
     @api.param("file_id", "Get job(s) with this file ID", "query", **{"type": int})
@@ -84,6 +85,7 @@ class Jobs(Resource):
             return {'message': 'The requested job don\'t exist.'}, 404
 
     @api.doc(id="post_job")
+    @api.doc(security="user_access_jwt")
     @api.param("name", "Job name", "formData", **{"type": str, "required": True})
     @api.param("gcode", "Gcode file", "formData", **{"type": "file", "required": True})
     @api.response(201, "Success", job_model)
@@ -151,6 +153,7 @@ class NotDoneJobs(Resource):
     /jobs/not_done
     """
     @api.doc(id="get_not_done_jobs")
+    @api.doc(security="user_access_jwt")
     @api.param("order_by_priority", "Get the jobs ordered by the priority index", "query", **{"type": bool, "default": False})
     @api.response(200, "Success", [job_model])
     @api.response(400, "Invalid query parameter")
@@ -188,6 +191,7 @@ class JobStates(Resource):
     /jobs/states
     """
     @api.doc(id="get_jobs_states")
+    @api.doc(security="user_access_jwt")
     @api.response(200, "Success", [job_state_model])
     @api.response(401, "Unauthorized resource access")
     @api.response(422, "Invalid access token")
@@ -213,6 +217,7 @@ class Job(Resource):
     /jobs/<job_id>
     """
     @api.doc(id="get_job")
+    @api.doc(security="user_access_jwt")
     @api.response(200, "Success", job_model)
     @api.response(401, "Unauthorized resource access")
     @api.response(404, "There is no job with this ID in the database")
@@ -236,6 +241,7 @@ class Job(Resource):
             return marshal(job, job_model, skip_none=True), 200
 
     @api.doc(id="delete_job")
+    @api.doc(security="user_access_jwt")
     @api.param("delete_file", "Delete the file associated with this job", "query", **{"type": bool, "default": True})
     @api.response(200, "Success")
     @api.response(401, "Unauthorized resource access")
@@ -286,6 +292,7 @@ class Job(Resource):
         return {'message': 'Job <{}> deleted from the database.'.format(job.name)}, 200
 
     @api.doc(id="put_job")
+    @api.doc(security="user_access_jwt")
     @api.expect(edit_job_model, validate=True)
     @api.response(200, "Success", job_model)
     @api.response(401, "Unauthorized resource access")
@@ -334,6 +341,7 @@ class JobReorder(Resource):
     /jobs/<int:job_id>/reorder
     """
     @api.doc(id="reorder_job")
+    @api.doc(security="user_access_jwt")
     @api.expect(reorder_job_model, validate=True)
     @api.response(200, "Job reordered successfully")
     @api.response(401, "Unauthorized resource access")

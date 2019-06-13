@@ -29,17 +29,7 @@ api = Api(
     version='0.1',
     description='This API manages all the data operations for the queue manager',
     authorizations={
-        'user_refresh_jwt': {
-            "type": "apiKey",
-            "in": "header",
-            "name": "Authorization",
-        },
         'user_access_jwt': {
-            "type": "apiKey",
-            "in": "header",
-            "name": "Authorization",
-        },
-        'printer_refresh_jwt': {
             "type": "apiKey",
             "in": "header",
             "name": "Authorization",

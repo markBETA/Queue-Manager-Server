@@ -26,6 +26,7 @@ class Printer(Resource):
     /printer
     """
     @api.doc(id="get_printer")
+    @api.doc(security=["user_access_jwt", "printer_access_jwt"])
     @api.response(200, "Success", printer_model)
     @api.response(500, "Unable to read the data from the database")
     @jwt_required
@@ -44,6 +45,7 @@ class PrinterMaterials(Resource):
     /printer/materials
     """
     @api.doc(id="get_printer_materials")
+    @api.doc(security=["user_access_jwt", "printer_access_jwt"])
     @api.response(200, "Success", [printer_material_model])
     @api.response(500, "Unable to read the data from the socketio_printer")
     @jwt_required
@@ -62,6 +64,7 @@ class PrinterExtruderTypes(Resource):
     /printer/extruder_types
     """
     @api.doc(id="get_printer_extruder_types")
+    @api.doc(security=["user_access_jwt", "printer_access_jwt"])
     @api.response(200, "Success", [printer_extruder_type_model])
     @api.response(500, "Unable to read the data from the socketio_printer")
     @jwt_required
