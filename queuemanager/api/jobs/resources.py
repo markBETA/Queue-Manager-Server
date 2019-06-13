@@ -380,3 +380,35 @@ class JobReorder(Resource):
         socketio_mgr.client_namespace.emit_jobs_updated(broadcast=True)
 
         return {'message': 'Job <{}> reordered successfully.'.format(job.name)}, 200
+
+
+@api.route("/<int:job_id>/reprint")
+class JobReprint(Resource):
+    """
+    /jobs/<int:job_id>/reprint
+    """
+    @api.doc(id="reprint_job")
+    @api.doc(security="user_access_jwt")
+    @api.response(200, "Job enqueued for reprint successfully")
+    @api.response(401, "Unauthorized resource access")
+    @api.response(404, "There is no job with this ID in the database")
+    @api.response(422, "Invalid access token")
+    @api.response(500, "Unable to read the data from the database")
+    @api.response(500, "Unable to edit the job from the database")
+    @jwt_required
+    def put(self, job_id: int):
+        current_user = get_jwt_identity()
+
+        if current_user.get('type') != "user":
+            return {'message': 'Only user access tokens are allowed.'}, 422
+
+        job = db.get_jobs(id=job_id)
+
+        if job is None:
+            return {'message': 'There is no job with this ID in the database.'}, 404
+
+        db.reprint_done_job(job)
+
+        socketio_mgr.client_namespace.emit_jobs_updated(broadcast=True)
+
+        return {'message': 'Job <{}> enqueued for reprint.'.format(job.name)}, 200

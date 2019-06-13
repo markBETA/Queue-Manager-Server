@@ -10,4 +10,5 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from .definitions import api
 from .models import user_model

@@ -15,6 +15,7 @@ from .files import api as files_ns
 from .jobs import api as jobs_ns
 from .jwt_manager import jwt_manager
 from .printer import api as printer_ns
+from .users import api as users_ns
 
 
 def init_app(app):
@@ -31,6 +32,7 @@ def init_app(app):
     api.add_namespace(files_ns, "/files")
     api.add_namespace(jobs_ns, "/jobs")
     api.add_namespace(printer_ns, "/printer")
+    api.add_namespace(users_ns, '/users')
 
     # Register the API blueprint
     app.register_blueprint(api_bp, url_prefix='/api')

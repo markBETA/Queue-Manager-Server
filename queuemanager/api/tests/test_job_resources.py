@@ -645,3 +645,68 @@ def test_reorder_job(db_manager, jwt_blacklist_manager, http_client):
     r = http_client.get("api/jobs?&state=Waiting&order_by_priority=true", headers=auth_header)
     assert r.status_code == 200
     assert r.json == marshal([jobs[1], jobs[0], jobs[2], jobs[3]], job_model, skip_none=True)
+
+
+def test_reprint_job(db_manager, jwt_blacklist_manager, http_client):
+    user = db_manager.get_users(id=1)
+    printer = db_manager.get_printers(id=1)
+    files = []
+    jobs = []
+    for i in range(4):
+        files.append(db_manager.insert_file(user, "test-file-{}".format(str(i)), "/home/Marc/test{}".format(str(i))))
+        jobs.append(db_manager.insert_job("test-job-{}".format(str(i)), files[-1], user))
+        db_manager.enqueue_created_job(jobs[i])
+    db_manager.update_job(jobs[0], canBePrinted=True)
+    db_manager.assign_job_to_printer(printer, jobs[0])
+    db_manager.set_printing_job(jobs[0])
+    db_manager.set_finished_job(jobs[0])
+    db_manager.set_done_job(jobs[0], True)
+    job_id = jobs[0].id
+
+    access_token = create_access_token({
+        "type": "printer",
+        "id": 1,
+        "serial_number": "000.00000.0000"
+    })
+    jwt_blacklist_manager.add_access_token(decode_token(access_token))
+    auth_header = {"Authorization": "Bearer " + access_token}
+
+    r = http_client.put("api/jobs/" + str(job_id) + "/reprint", json={"previous_job_id": 2})
+    assert r.status_code == 401
+    assert r.json == {"message": "Missing Authorization Header"}
+
+    r = http_client.put("api/jobs/" + str(job_id) + "/reprint", headers={"Authorization": "Bearer "})
+    assert r.status_code == 422
+    assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+
+    r = http_client.put("api/jobs/" + str(job_id) + "/reprint", headers=auth_header)
+    assert r.status_code == 422
+    assert r.json == {'message': 'Only user access tokens are allowed.'}
+
+    access_token = create_access_token({
+        "type": "user",
+        "id": user.id,
+        "is_admin": False
+    })
+    jwt_blacklist_manager.add_access_token(decode_token(access_token))
+    auth_header = {"Authorization": "Bearer " + access_token}
+
+    r = http_client.put("api/jobs/100/reprint", headers=auth_header)
+    assert r.status_code == 404
+    assert r.json == {'message': 'There is no job with this ID in the database.'}
+
+    jobs = db_manager.get_jobs()
+
+    r = http_client.get("api/jobs?&state=Waiting&order_by_priority=true", headers=auth_header)
+    assert r.status_code == 200
+    assert r.json == marshal([jobs[1], jobs[2], jobs[3]], job_model, skip_none=True)
+
+    r = http_client.put("api/jobs/" + str(job_id) + "/reprint", headers=auth_header)
+    assert r.status_code == 200
+    assert r.json == {'message': 'Job <test-job-0> enqueued for reprint.'}
+
+    jobs = db_manager.get_jobs()
+
+    r = http_client.get("api/jobs?&state=Waiting&order_by_priority=true", headers=auth_header)
+    assert r.status_code == 200
+    assert r.json == marshal([jobs[1], jobs[2], jobs[3], jobs[0]], job_model, skip_none=True)
