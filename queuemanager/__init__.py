@@ -52,14 +52,14 @@ def create_app(name=__name__, override_config=None, init_db_manager_values=False
     else:
         app.logger.setLevel(INFO)
 
+    if app.config.get("ENV") == "production":
+        cors_allowed_origins = ["http://queuemanagerbcn3d.ml", "http://www.queuemanagerbcn3d.ml"]
+    else:
+        cors_allowed_origins = None
+
     app.logger.info("Loading server modules...")
 
     with app.app_context():
-        # Init Flask-CORS plugin
-        if "flask-cors" in enabled_modules:
-            from flask_cors import CORS
-            CORS(app)
-
         # Register the socketio_printer commands
         if "app-database" in enabled_modules:
             from .database import init_app as db_init_app
@@ -96,6 +96,14 @@ def create_app(name=__name__, override_config=None, init_db_manager_values=False
         if "api" in enabled_modules:
             from .api import init_app as api_init_app
             api_init_app(app)
+
+        # Init Flask-CORS plugin
+        if "flask-cors" in enabled_modules and cors_allowed_origins is not None:
+            from flask_cors import CORS
+            CORS(
+                app,
+                resources={r"/api/*": {"origins": cors_allowed_origins}}
+            )
 
     app.logger.info("Server modules loaded")
 
