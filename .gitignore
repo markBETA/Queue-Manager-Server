@@ -57,7 +57,6 @@ local_settings.py
 db.sqlite3
 
 # Flask stuff:
-instance/
 .webassets-cache
 
 # Scrapy stuff:
@@ -104,8 +103,8 @@ venv.bak/
 .mypy_cache/
 
 # keys
-instance/jwtRS256.key
-instance/jwtRS256.key.pub
+instance/jwt.key
+instance/jwt.key.pub
 
 # files
 data/files/*

@@ -31,5 +31,5 @@ JWT_BLACKLIST_TOKEN_CHECKS = ['access', 'refresh']
 JWT_ERROR_MESSAGE_KEY = "message"
 JWT_IDENTITY_CLAIM = "sub"
 JWT_ALGORITHM = "RS256"
-with open("instance/jwtRS256.key.pub", "r") as f:
+with open("instance/jwt.key.pub", "r") as f:
     JWT_PUBLIC_KEY = f.read()
