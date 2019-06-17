@@ -139,7 +139,7 @@ def test_emit_printer_data_updated(socketio_client, db_manager):
             "width": 420,
             "height": 210
         },
-        "name": "default",
+        "name": "Sigmax 4.0",
         "ip_address": None,
         "state": {
             "is_operational_state": False,
