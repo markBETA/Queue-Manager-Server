@@ -13,8 +13,6 @@ __status__ = "Development"
 from .base_class import SocketIOManagerBase
 
 
-# TODO: Improve error detection and required actions
-
 class PrinterNamespaceManager(SocketIOManagerBase):
     """
     This class defines the printer namespace and the events that the server will be listening for.
