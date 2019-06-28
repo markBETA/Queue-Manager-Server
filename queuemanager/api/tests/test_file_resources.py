@@ -85,7 +85,7 @@ def test_get_file(db_manager, jwt_blacklist_manager, http_client, app):
     r = http_client.get("/api/files/1", headers=auth_header)
     assert r.status_code == 200
     assert ('Content-Type', 'application/octet-stream') in list(r.headers)
-    assert ('X-Accel-Redirect', '/files/download/1') in list(r.headers)
+    assert ('X-Accel-Redirect', '/files/1') in list(r.headers)
     assert ('Content-Disposition', 'attachment; filename="test"') in list(r.headers)
     assert ('Content-Length', '0') in list(r.headers)
 

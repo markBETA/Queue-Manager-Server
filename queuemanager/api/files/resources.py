@@ -42,7 +42,7 @@ class File(Resource):
         Make an internal redirection to the file resource
         """
         response = make_response()
-        response.headers['X-Accel-Redirect'] = '/files/download/{}'.format(str(file.id))
+        response.headers['X-Accel-Redirect'] = '/files/{}'.format(str(file.id))
         response.headers['Content-Type'] = 'application/octet-stream'
         response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(file.name)
 
