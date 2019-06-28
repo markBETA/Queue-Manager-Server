@@ -5,16 +5,16 @@ This module implements the printer namespace events testing.
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from datetime import timedelta
-from shutil import copyfile
 
 from sqlalchemy.orm import Session
 
+from queuemanager.file_storage import FileDescriptor
 from queuemanager.socketio import client_namespace
 
 
@@ -210,20 +210,12 @@ def test_emit_job_progress_updated(socketio_client, db_manager):
 
 
 def test_on_analyze_job(socketio_client, client_session_key, db_manager, file_manager):
-    class FlaskFile(object):
-        def __init__(self, filename, full_path):
-            self.filename = filename
-            self.origin_full_path = full_path
-
-        def save(self, destination_path):
-            copyfile(self.origin_full_path, destination_path)
-
     user = db_manager.get_users(id=1)
-    helper_file = FlaskFile("test-file.gcode", "./test-file-no-header.gcode")
-    file = file_manager.save_file(helper_file, user, analise_after_save=False)
+    file_descriptor = FileDescriptor("test-file.gcode", path="./test-file-no-header.gcode")
+    file = file_manager.save_file(file_descriptor, user)
     db_manager.insert_job("test-job-no-header", file, user)
-    helper_file = FlaskFile("test-file.gcode", "./test-file.gcode")
-    file = file_manager.save_file(helper_file, user, analise_after_save=False)
+    file_descriptor = FileDescriptor("test-file.gcode", path="./test-file.gcode")
+    file = file_manager.save_file(file_descriptor, user)
     db_manager.insert_job("test-job", file, user)
 
     data = {"session_key": client_session_key, "job_id": 100}
@@ -249,7 +241,7 @@ def test_on_analyze_job(socketio_client, client_session_key, db_manager, file_ma
     assert received_events[0]['name'] == 'job_analyze_error'
     assert received_events[0]['args'][0] == {
         "job": {'id': 1, 'name': 'test-job-no-header'},
-        "message": "The file data can't be empty",
+        "message": "The file data can't be loaded. Details: The file don't contain the data dictionary",
         "additional_info": None
     }
 

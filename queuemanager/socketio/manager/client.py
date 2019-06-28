@@ -5,14 +5,13 @@ This module implements the client namespace manager class.
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 from .base_class import SocketIOManagerBase
 from ...database import Job, DBManagerError
-from ...file_storage import file_mgr
 from ...file_storage.exceptions import (
     MissingFileDataKeys, InvalidFileData
 )
@@ -30,22 +29,26 @@ class ClientNamespaceManager(SocketIOManagerBase):
             return
 
         if job is None:
-            self.client_namespace.emit_job_analyze_error(Job(id=job_id), "There is no job with this ID in the socketio_printer")
+            self.client_namespace.emit_job_analyze_error(
+                Job(id=job_id), "There is no job with this ID in the socketio_printer")
             return
 
         try:
-            # Retrieve the file information if needed
+            # Retrieve the file data if needed
             if not job.file.fileData:
-                file_mgr.retrieve_file_data(job.file)
+                self.file_manager.retrieve_file_data(job.file)
+            # Update the file information from the file data
+            self.file_manager.set_file_information_from_file_data(job.file)
             # Get the job allowed configuration from the file data
-            file_mgr.set_job_allowed_config_from_file_data(job)
+            self.file_manager.set_job_allowed_config_from_file_data(job)
             # Get the job estimated needed material per extruder from the file data
-            file_mgr.set_job_estimated_needed_material_from_file_data(job)
+            self.file_manager.set_job_estimated_needed_material_from_file_data(job)
         except (MissingFileDataKeys, InvalidFileData) as e:
             self.client_namespace.emit_job_analyze_error(job, str(e))
             return
         except DBManagerError:
-            self.client_namespace.emit_job_analyze_error(job, "Can't save the retrieved file header at the socketio_printer")
+            self.client_namespace.emit_job_analyze_error(
+                job, "Can't save the retrieved file header at the socketio_printer")
             return
 
         self.client_namespace.emit_job_analyze_done(job)
@@ -59,7 +62,8 @@ class ClientNamespaceManager(SocketIOManagerBase):
             return
 
         if job is None:
-            self.client_namespace.emit_job_enqueue_error(Job(id=job_id), "There is no job with this ID in the socketio_printer")
+            self.client_namespace.emit_job_enqueue_error(
+                Job(id=job_id), "There is no job with this ID in the socketio_printer")
             return
 
         try:
@@ -72,15 +76,14 @@ class ClientNamespaceManager(SocketIOManagerBase):
         self.client_namespace.emit_jobs_updated(broadcast=True)
 
         try:
-            jobs_in_queue = self.db_manager.get_jobs(order_by_priority=True,
-                                                     idState=self.db_manager.job_state_ids["Waiting"],
-                                                     canBePrinted=True)
+            jobs_in_queue = self.db_manager.count_jobs_in_queue(only_can_be_printed=True)
         except DBManagerError as e:
             self.client_namespace.emit_job_enqueue_error(None, str(e))
             return
 
-        # Get the printer object
-        printer = self.db_manager.get_printers(id=1)
-
-        if len(jobs_in_queue) == 1 and printer.state.stateString == "Ready":
-            self.assign_job_to_printer(job)
+        if jobs_in_queue == 1:
+            try:
+                self.assign_job_to_printer(job)
+            except DBManagerError as e:
+                self.client_namespace.emit_job_enqueue_error(job, str(e))
+                return

@@ -5,16 +5,17 @@ This module implements the client namespace class.
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 import uuid
 
-from flask import current_app, request, session
-from flask_socketio import Namespace, emit, disconnect
+from flask import request, session
+from flask_socketio import emit, disconnect
 
+from .base_class import Namespace
 from ..definitions import socketio_auth_required
 from ..schemas import (
     EmitJobAnalyzeDoneSchema, EmitJobAnalyzeErrorSchema, EmitJobEnqueueDoneSchema, EmitJobEnqueueErrorSchema,
@@ -49,8 +50,7 @@ class ClientNamespace(Namespace):
         if not serialized_data.errors:
             emit("job_analyze_done", serialized_data.data, broadcast=broadcast, namespace=self.namespace)
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("job_analyze_done", serialized_data.errors)
 
     def emit_job_analyze_error(self, job: Job, error_message: str, additional_info: dict = None,
                                broadcast: bool = False):
@@ -64,8 +64,7 @@ class ClientNamespace(Namespace):
         if not serialized_data.errors:
             emit("job_analyze_error", serialized_data.data, broadcast=broadcast, namespace=self.namespace)
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("job_analyze_error", serialized_data.errors)
 
     def emit_job_enqueue_done(self, job: Job, broadcast: bool = False):
         """
@@ -77,8 +76,7 @@ class ClientNamespace(Namespace):
         if not serialized_data.errors:
             emit("job_enqueue_done", serialized_data.data, broadcast=broadcast, namespace=self.namespace)
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("job_enqueue_done", serialized_data.errors)
 
     def emit_job_enqueue_error(self, job: Job, error_message: str, additional_info: dict = None,
                                broadcast: bool = False):
@@ -92,8 +90,7 @@ class ClientNamespace(Namespace):
         if not serialized_data.errors:
             emit("job_enqueue_error", serialized_data.data, broadcast=broadcast, namespace=self.namespace)
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("job_enqueue_error", serialized_data.errors)
 
     def emit_printer_data_updated(self, printer: Printer, broadcast: bool = False):
         """
@@ -105,8 +102,7 @@ class ClientNamespace(Namespace):
         if not serialized_data.errors:
             emit("printer_data_updated", serialized_data.data, broadcast=broadcast, namespace=self.namespace)
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("printer_data_updated", serialized_data.errors)
 
     def emit_printer_temperatures_updated(self, bed_temp: float, extruders_temp: list, broadcast: bool = False):
         """
@@ -119,8 +115,7 @@ class ClientNamespace(Namespace):
         if not serialized_data.errors:
             emit("printer_temperatures_updated", serialized_data.data, broadcast=broadcast, namespace=self.namespace)
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("printer_temperatures_updated", serialized_data.errors)
 
     def emit_job_progress_updated(self, job: Job, broadcast: bool = False):
         """
@@ -132,28 +127,26 @@ class ClientNamespace(Namespace):
         if not serialized_data.errors:
             emit("job_progress_updated", serialized_data.data, broadcast=broadcast, namespace=self.namespace)
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("job_progress_update", serialized_data.errors)
 
     def on_connect(self):
         """
         Event called when the client is connected
         """
         if session["identity"].get("type") != "user":
-            current_app.logger.info("Detected invalid access token type. Disconnecting SID '{}'".format(request.sid))
+            self.app.logger.info("Detected invalid access token type. Disconnecting SID '{}'".format(request.sid))
             disconnect()
 
         session["key"] = str(uuid.uuid4())
         emit("session_key", session["key"], broadcast=False, namespace=self.namespace)
 
-        current_app.logger.info("Client %s connected", request.sid)
+        self.app.logger.info("Client %s connected", request.sid)
 
-    @staticmethod
-    def on_disconnect():
+    def on_disconnect(self):
         """
         Event called when the client is disconnected
         """
-        current_app.logger.info("Client %s disconnected", request.sid)
+        self.app.logger.info("Client %s disconnected", request.sid)
 
     @socketio_auth_required
     def on_analyze_job(self, data: dict):

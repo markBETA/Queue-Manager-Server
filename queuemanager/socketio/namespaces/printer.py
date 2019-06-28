@@ -5,23 +5,24 @@ This module implements the printer namespace class.
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 import uuid
 
-from flask import current_app, request, session
-from flask_socketio import Namespace, emit
+from flask import request, session
+from flask_socketio import emit
 
+from .base_class import Namespace
 from ..definitions import socketio_auth_required
 from ..schemas import (
     EmitPrintJobSchema, EmitJobRecoveredSchema, OnInitialDataSchema, OnStateUpdatedSchema, OnExtrudersUpdatedSchema,
     OnPrintStartedSchema, OnPrintFinishedSchema, OnPrintFeedbackSchema, OnPrinterTemperaturesUpdatedSchema,
     OnJobProgressUpdatedSchema
 )
-from ...database import Job
+from ...database import Job, DBManagerError
 
 
 class PrinterNamespace(Namespace):
@@ -42,8 +43,7 @@ class PrinterNamespace(Namespace):
         if not serialized_data.errors:
             emit("print_job", serialized_data.data, room=sid, broadcast=broadcast, namespace=self.namespace)
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("print_job", serialized_data.errors)
 
     def emit_job_recovered(self, job: Job, sid: str = None, broadcast: bool = False):
         """
@@ -55,20 +55,23 @@ class PrinterNamespace(Namespace):
         if not serialized_data.errors:
             emit("job_recovered", serialized_data.data, room=sid, broadcast=broadcast, namespace=self.namespace)
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("job_recovered", serialized_data.errors)
 
     def on_connect(self):
         """
         Event called when the printer is connected
         """
-        connection_allowed = self.socketio_manager.printer_connected(request.sid, request.remote_addr) and \
-            session["identity"].get("type") == "printer"
+        try:
+            connection_allowed = self.socketio_manager.printer_connected(request.sid, request.remote_addr) and \
+                session["identity"].get("type") == "printer"
+        except DBManagerError as e:
+            self.app.logger.error("Unable to save the printer connection at the database. Details: " + str(e))
+            return False
 
         if connection_allowed:
-            current_app.logger.info("Printer connected")
+            self.app.logger.info("Printer connected")
         else:
-            current_app.logger.info("Printer already connected. New connection rejected")
+            self.app.logger.info("Printer already connected. New connection rejected")
 
         if connection_allowed:
             session["key"] = str(uuid.uuid4())
@@ -80,9 +83,13 @@ class PrinterNamespace(Namespace):
         """
         Event called when the printer is disconnected
         """
-        self.socketio_manager.printer_disconnected(request.sid)
+        try:
+            self.socketio_manager.printer_disconnected(request.sid)
+        except DBManagerError as e:
+            self.app.logger.error("Unable to save the printer disconnection at the database. Details: " + str(e))
+            return
 
-        current_app.logger.info("Printer disconnected")
+        self.app.logger.info("Printer disconnected")
 
     @socketio_auth_required
     def on_initial_data(self, data: dict):
@@ -93,10 +100,12 @@ class PrinterNamespace(Namespace):
         deserialized_data = OnInitialDataSchema().load(data)
 
         if not deserialized_data.errors:
-            self.socketio_manager.printer_initial_data(**deserialized_data.data)
+            try:
+                self.socketio_manager.printer_initial_data(**deserialized_data.data)
+            except DBManagerError as e:
+                self.app.logger.error("Unable to save the printer initial data at the database. Details: " + str(e))
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("initial_data", deserialized_data.errors)
 
     @socketio_auth_required
     def on_state_updated(self, data: dict):
@@ -107,10 +116,13 @@ class PrinterNamespace(Namespace):
         deserialized_data = OnStateUpdatedSchema().load(data)
 
         if not deserialized_data.errors:
-            self.socketio_manager.printer_state_updated(**deserialized_data.data)
+            try:
+                self.socketio_manager.printer_state_updated(**deserialized_data.data)
+            except DBManagerError as e:
+                self.app.logger.error("Unable to save the printer state update data at the database. "
+                                      "Details: " + str(e))
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("state_updated", deserialized_data.errors)
 
     @socketio_auth_required
     def on_extruders_updated(self, data: dict):
@@ -121,10 +133,13 @@ class PrinterNamespace(Namespace):
         deserialized_data = OnExtrudersUpdatedSchema().load(data)
 
         if not deserialized_data.errors:
-            self.socketio_manager.printer_extruders_updated(**deserialized_data.data)
+            try:
+                self.socketio_manager.printer_extruders_updated(**deserialized_data.data)
+            except DBManagerError as e:
+                self.app.logger.error("Unable to save the printer extruders update data at the database. "
+                                      "Details: " + str(e))
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("extruders_updated", deserialized_data.errors)
 
     @socketio_auth_required
     def on_print_started(self, data: dict):
@@ -135,10 +150,13 @@ class PrinterNamespace(Namespace):
         deserialized_data = OnPrintStartedSchema().load(data)
 
         if not deserialized_data.errors:
-            self.socketio_manager.print_started(**deserialized_data.data)
+            try:
+                self.socketio_manager.print_started(**deserialized_data.data)
+            except DBManagerError as e:
+                self.app.logger.error("Unable to update the started print state at the database. "
+                                      "Details: " + str(e))
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("print_started", deserialized_data.errors)
 
     @socketio_auth_required
     def on_print_finished(self, data: dict):
@@ -149,10 +167,13 @@ class PrinterNamespace(Namespace):
         deserialized_data = OnPrintFinishedSchema().load(data)
 
         if not deserialized_data.errors:
-            self.socketio_manager.print_finished(**deserialized_data.data)
+            try:
+                self.socketio_manager.print_finished(**deserialized_data.data)
+            except DBManagerError as e:
+                self.app.logger.error("Unable to update the finished print state at the database. "
+                                      "Details: " + str(e))
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("print_finished", deserialized_data.errors)
 
     @socketio_auth_required
     def on_print_feedback(self, data: dict):
@@ -163,10 +184,13 @@ class PrinterNamespace(Namespace):
         deserialized_data = OnPrintFeedbackSchema().load(data)
 
         if not deserialized_data.errors:
-            self.socketio_manager.print_feedback(**deserialized_data.data)
+            try:
+                self.socketio_manager.print_feedback(**deserialized_data.data)
+            except DBManagerError as e:
+                self.app.logger.error("Unable to save the finished print feedback at the database. "
+                                      "Details: " + str(e))
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("print_feedback", deserialized_data.errors)
 
     @socketio_auth_required
     def on_printer_temperatures_updated(self, data: dict):
@@ -177,10 +201,13 @@ class PrinterNamespace(Namespace):
         deserialized_data = OnPrinterTemperaturesUpdatedSchema().load(data)
 
         if not deserialized_data.errors:
-            self.socketio_manager.printer_temperatures_updated(**deserialized_data.data)
+            try:
+                self.socketio_manager.printer_temperatures_updated(**deserialized_data.data)
+            except DBManagerError as e:
+                self.app.logger.error("Unable to save printer temperatures update at the database. "
+                                      "Details: " + str(e))
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("printer_temperatures_updated", deserialized_data.errors)
 
     @socketio_auth_required
     def on_job_progress_updated(self, data: dict):
@@ -191,7 +218,10 @@ class PrinterNamespace(Namespace):
         deserialized_data = OnJobProgressUpdatedSchema().load(data)
 
         if not deserialized_data.errors:
-            self.socketio_manager.job_progress_updated(**deserialized_data.data)
+            try:
+                self.socketio_manager.job_progress_updated(**deserialized_data.data)
+            except DBManagerError as e:
+                self.app.logger.error("Unable to save the current job progress update at the database. "
+                                      "Details: " + str(e))
         else:
-            # TODO: Send error notification
-            pass
+            self._log_event_processing_error("job_progress_updated", deserialized_data.errors)

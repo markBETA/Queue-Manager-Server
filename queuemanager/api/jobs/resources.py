@@ -5,12 +5,12 @@ This module defines the all the api resources for the jobs namespace
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from flask import request
+from flask import request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restplus import Resource, marshal
 from flask_restplus.mask import apply as apply_mask
@@ -26,7 +26,7 @@ from ...database import db_mgr as db
 from ...database.manager.exceptions import (
     DBManagerError, UniqueConstraintError
 )
-from ...file_storage import file_mgr
+from ...file_storage import FileDescriptor, file_mgr
 from ...file_storage.exceptions import (
     FileManagerError
 )
@@ -84,11 +84,30 @@ class Jobs(Resource):
         else:
             return {'message': 'The requested job don\'t exist.'}, 404
 
-    @api.doc(id="post_job")
+
+@api.route("/create")
+class JobCreate(Resource):
+    @staticmethod
+    def _generate_file_descriptor_production():
+        # Read the file name and temporary path from the request form data
+        filename = request.form["gcode.name"]
+        tmp_path = request.form["gcode.path"]
+
+        return FileDescriptor(filename, path=tmp_path)
+
+    @staticmethod
+    def _generate_file_descriptor_development():
+        # Get the file name and the flask file object from the request files
+        flask_file = request.files["gcode"]
+        filename = flask_file.filename
+
+        return FileDescriptor(filename, flask_file_obj=flask_file)
+
+    @api.doc(id="create_job")
     @api.doc(security="user_access_jwt")
     @api.param("name", "Job name", "formData", **{"type": str, "required": True})
     @api.param("gcode", "Gcode file", "formData", **{"type": "file", "required": True})
-    @api.response(201, "Success", job_model)
+    @api.response(201, "Success")
     @api.response(400, 'No file attached with the request')
     @api.response(400, 'No job name specified with the request')
     @api.response(401, "Unauthorized resource access")
@@ -99,7 +118,8 @@ class Jobs(Resource):
     @jwt_required
     def post(self):
         """
-        Register a new job in the database
+        Create a new job using the GCODE located at the request body or the server filesystem
+        (depends on the environment)
         """
         current_user = get_jwt_identity()
 
@@ -110,23 +130,25 @@ class Jobs(Resource):
         if user_id is None:
             return {'message': "Can't retrieve the user ID from the access token."}, 422
 
-        # Check if the post request has the file part
-        if 'gcode' not in request.files:
-            return {'message': 'No file attached with the request.'}, 400
-
         # Check if the name of the new job is attached with the form data
         if 'name' not in request.form:
             return {'message': 'No job name specified with the request.'}, 400
 
-        # Get the default user
+        # Get the user from the user ID
         user = db.get_users(id=current_user.get('id'))
         if user is None:
             return {'message': "There isn't any registered user with the ID from the access token."}, 422
 
-        # Save the file to the filesystem
-        file = file_mgr.save_file(request.files["gcode"], user)
+        if current_app.config.get("ENV") == "production":
+            file_descriptor = self._generate_file_descriptor_production()
+        else:
+            # Check if the post request has the file part
+            if 'gcode' not in request.files:
+                return {'message': 'No file attached with the request.'}, 400
+            file_descriptor = self._generate_file_descriptor_development()
 
-        # Retrieve the file information
+        # Save the file into the server files storage
+        file = file_mgr.save_file(file_descriptor, user)
         file_mgr.retrieve_file_basic_info(file)
 
         # Create the job from the file
@@ -163,7 +185,7 @@ class NotDoneJobs(Resource):
     @jwt_required
     def get(self):
         """
-        Returns all jobs in the database after apply the filters set in the query
+        Returns all the not done jobs in the database after apply the filters set in the query
         """
         current_user = get_jwt_identity()
 
@@ -351,6 +373,9 @@ class JobReorder(Resource):
     @api.response(500, "Unable to edit the job from the database")
     @jwt_required
     def put(self, job_id: int):
+        """
+        Reorder the specified job
+        """
         current_user = get_jwt_identity()
 
         if current_user.get('type') != "user":
@@ -397,6 +422,9 @@ class JobReprint(Resource):
     @api.response(500, "Unable to edit the job from the database")
     @jwt_required
     def put(self, job_id: int):
+        """
+        Reprint a job that is in 'Done' state
+        """
         current_user = get_jwt_identity()
 
         if current_user.get('type') != "user":
@@ -410,5 +438,10 @@ class JobReprint(Resource):
         db.reprint_done_job(job)
 
         socketio_mgr.client_namespace.emit_jobs_updated(broadcast=True)
+
+        jobs_in_queue = db.count_jobs_in_queue(only_can_be_printed=True)
+
+        if jobs_in_queue == 1:
+            socketio_mgr.assign_job_to_printer(job)
 
         return {'message': 'Job <{}> enqueued for reprint.'.format(job.name)}, 200

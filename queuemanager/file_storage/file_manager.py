@@ -5,13 +5,14 @@ This module defines the file storage manager class
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 import json
 import os
+import subprocess
 import warnings
 from datetime import timedelta
 
@@ -28,7 +29,16 @@ from ..database import (
 )
 
 
-# TODO: Improve exception raise messages
+class FileDescriptor(object):
+    """
+    This class implements a file descriptor object. It will contain the file name, file path (if any), and the flask
+    file object (if any)
+    """
+    def __init__(self, filename, path=None, flask_file_obj=None):
+        self.filename = filename
+        self.path = path
+        self.flask_file = flask_file_obj
+
 
 class FileManager(object):
     """
@@ -131,6 +141,21 @@ class FileManager(object):
 
         return extruder_estimated_needed_material
 
+    @staticmethod
+    def _save_flask_file(flask_file, destination):
+        try:
+            flask_file.save(destination)
+        except OSError:
+            raise FilesystemError("Unable to save the file in the server storage")
+
+    @staticmethod
+    def _move_file_async(origin, destination):
+        try:
+            with open(os.devnull, 'w') as fp:
+                subprocess.run(["cp", origin, destination], check=True, stdout=fp, stderr=fp)
+        except (subprocess.CalledProcessError, OSError) as e:
+            raise FilesystemError("Unable to save the file in the server storage")
+
     def init_app(self, app, create_upload_dir=True):
         self.app = app
 
@@ -163,8 +188,11 @@ class FileManager(object):
             except json.JSONDecodeError as e:
                 current_app.logger.error("The file data can't be loaded. Details: " + str(e))
                 raise InvalidFileData("The file data can't be loaded. Details: " + str(e))
-
             self.db_manager.update_file(file, fileData=file_data)
+        else:
+            current_app.logger.error(
+                "The file data can't be loaded. Details: The file don't contain the data dictionary")
+            raise InvalidFileData("The file data can't be loaded. Details: The file don't contain the data dictionary")
 
     def retrieve_file_basic_info(self, file: File):
         # Open the file for reading
@@ -211,7 +239,7 @@ class FileManager(object):
     def set_file_information_from_file_data(self, file: File):
         # Check that the file data is not empty
         if not file.fileData:
-            current_app.logger.error("Can't read the file information from the data of the file'" + str(file) +
+            current_app.logger.error("Can't read the file information from the data of the file '" + str(file) +
                                      "'. Details: The file data can't be empty")
             raise InvalidFileData("The file data can't be empty")
 
@@ -219,11 +247,11 @@ class FileManager(object):
         try:
             fields_to_update = self._get_file_print_information(file)
         except KeyError as e:
-            current_app.logger.error("Can't read the file basic information from the file data'" + str(file) +
+            current_app.logger.error("Can't read the file information from the data of the file '" + str(file) +
                                      "'. Details: The key " + str(e) + " is missing in the file data")
             raise MissingFileDataKeys("The key " + str(e) + " is missing in the file data")
         except (ValueError, TypeError):
-            current_app.logger.error("Can't read the file basic information from the file data'" + str(file) +
+            current_app.logger.error("Can't read the file information from the data of the file '" + str(file) +
                                      "'. Details: One of the values of the file data is corrupted")
             raise InvalidFileData("One of the values of the file data is corrupted")
 
@@ -235,20 +263,20 @@ class FileManager(object):
     def set_job_estimated_needed_material_from_file_data(self, job: Job):
         # Check that the file data is not empty
         if not job.file.fileData:
-            current_app.logger.error("Can't read the allowed config from the file data of the job '" + str(job) +
-                                     "'. Details: The file data can't be empty")
+            current_app.logger.error("Can't read the estimated needed material from the file data of the job '"
+                                     + str(job) + "'. Details: The file data can't be empty")
             raise InvalidFileData("The file data can't be empty")
         
         # Get the fields to update of the file
         try:
             extruders_estimated_needed_materials = self._get_extruder_estimated_needed_material(job.file)
         except KeyError as e:
-            current_app.logger.error("Can't read the allowed config from the file data of the job '" + str(job) +
-                                     "'. Details: The key " + str(e) + " is missing in the file data")
+            current_app.logger.error("Can't read the estimated needed material from the file data of the job '"
+                                     + str(job) + "'. Details: The key " + str(e) + " is missing in the file data")
             raise MissingFileDataKeys("The key " + str(e) + " is missing in the file data")
         except (ValueError, TypeError):
-            current_app.logger.error("Can't read the allowed config from the file data of the job '" + str(job) +
-                                     "'. Details: One of the values of the file data is corrupted")
+            current_app.logger.error("Can't read the estimated needed material from the file data of the job '"
+                                     + str(job) + "'. Details: One of the values of the file data is corrupted")
             raise InvalidFileData("One of the values of the file data is corrupted")
         
         # Update the job extruders data
@@ -267,7 +295,7 @@ class FileManager(object):
 
         return job
 
-    def save_file(self, file, user: User, analise_after_save: bool = False):
+    def save_file(self, file: FileDescriptor, user: User):
         # Check that the file is in gcode format
         if '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() != 'gcode':
             raise InvalidFileType("The file to save needs to be in gcode format")
@@ -275,19 +303,22 @@ class FileManager(object):
         # Create the file object in the socketio_printer
         file_obj = self.db_manager.insert_file(user, file.filename)
 
-        # Generate a random filename that will be used for saving it in the filesystem
+        # Set the file ID as the new filename and generate the destination path
         filename = str(file_obj.id)
-        full_path = os.path.join(self.app.config['FILE_MANAGER_UPLOAD_DIR'], secure_filename(filename))
+        destination_path = os.path.join(self.app.config['FILE_MANAGER_UPLOAD_DIR'], secure_filename(filename))
 
         # Save the file to the filesystem
-        file.save(full_path)
+        try:
+            if file.flask_file is not None:
+                self._save_flask_file(file.flask_file, destination_path)
+            else:
+                self._move_file_async(file.path, destination_path)
+        except FilesystemError as e:
+            self.db_manager.delete_file(file_obj)
+            raise e
 
         # Update the file path
-        self.db_manager.update_file(file_obj, fullPath=full_path)
-
-        # Analise the file (if specified)
-        if analise_after_save:
-            self.retrieve_file_data(file_obj)
+        self.db_manager.update_file(file_obj, fullPath=destination_path)
 
         return file_obj
 

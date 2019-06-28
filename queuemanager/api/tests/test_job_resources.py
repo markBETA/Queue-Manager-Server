@@ -5,7 +5,7 @@ This module implements the job namespace resources test suite.
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
@@ -127,7 +127,7 @@ def test_get_jobs(db_manager, jwt_blacklist_manager, http_client):
     assert r.json == marshal([jobs[2], jobs[1]], job_model, skip_none=True)
 
 
-def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_client, client_session_key):
+def test_create_job(db_manager, jwt_blacklist_manager, http_client, socketio_client, app):
     user = db_manager.get_users(id=1)
 
     access_token = create_access_token({
@@ -138,17 +138,17 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     jwt_blacklist_manager.add_access_token(decode_token(access_token))
     auth_header = {"Authorization": "Bearer " + access_token}
 
-    r = http_client.post("api/jobs")
+    r = http_client.post('api/jobs/create')
     assert r.status_code == 401
     assert r.json == {"message": "Missing Authorization Header"}
     assert not socketio_client.get_received('/client')
 
-    r = http_client.post("api/jobs", headers={"Authorization": "Bearer "}, json={})
+    r = http_client.post('api/jobs/create', headers={"Authorization": "Bearer "}, json={})
     assert r.status_code == 422
     assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
     assert not socketio_client.get_received('/client')
 
-    r = http_client.post("api/jobs", headers=auth_header)
+    r = http_client.post('api/jobs/create', headers=auth_header)
     assert r.status_code == 422
     assert r.json == {'message': 'Only user access tokens are allowed.'}
     assert not socketio_client.get_received('/client')
@@ -161,7 +161,7 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     jwt_blacklist_manager.add_access_token(decode_token(access_token))
     auth_header = {"Authorization": "Bearer " + access_token}
 
-    r = http_client.post("api/jobs", headers=auth_header)
+    r = http_client.post('api/jobs/create', headers=auth_header)
     assert r.status_code == 422
     assert r.json == {'message': "Can't retrieve the user ID from the access token."}
     assert not socketio_client.get_received('/client')
@@ -177,7 +177,7 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     wrong_data = {
         'name': 'test-job'
     }
-    r = http_client.post('/api/jobs', headers=auth_header, data=wrong_data)
+    r = http_client.post('api/jobs/create', headers=auth_header, data=wrong_data)
     assert r.status_code == 400
     assert r.json == {'message': 'No file attached with the request.'}
     assert not socketio_client.get_received('/client')
@@ -185,7 +185,7 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     wrong_data = {
         'gcode': (BytesIO(open("./test-file.gcode").read().encode('utf-8')), 'test_file.gcode'),
     }
-    r = http_client.post('/api/jobs', headers=auth_header, data=wrong_data)
+    r = http_client.post('api/jobs/create', headers=auth_header, data=wrong_data)
     assert r.status_code == 400
     assert r.json == {'message': 'No job name specified with the request.'}
     assert not socketio_client.get_received('/client')
@@ -202,7 +202,7 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
         'name': 'test-job'
     }
 
-    r = http_client.post('/api/jobs', headers=auth_header_fail, data=data)
+    r = http_client.post('api/jobs/create', headers=auth_header_fail, data=data)
     assert r.status_code == 422
     assert r.json == {'message': "There isn't any registered user with the ID from the access token."}
     assert not socketio_client.get_received('/client')
@@ -212,7 +212,7 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
         'name': 'test-job'
     }
 
-    r = http_client.post('/api/jobs', headers=auth_header, data=data)
+    r = http_client.post('api/jobs/create', headers=auth_header, data=data)
     received_events = socketio_client.get_received('/client')
     assert r.status_code == 201
     assert r.json == marshal(db_manager.get_jobs(id=1), job_model, skip_none=True)
@@ -225,15 +225,40 @@ def test_post_job(db_manager, jwt_blacklist_manager, http_client, socketio_clien
     with open("./test-file.gcode") as expected_f:
         with open('files/'+files[0]) as f:
             assert expected_f.read() == f.read()
+    os.unlink('files/'+files[0])
 
     data = {
         'gcode': (BytesIO(open("./test-file.gcode").read().encode('utf-8')), 'test_file.gcode'),
         'name': 'test-job'
     }
-    r = http_client.post('/api/jobs', headers=auth_header, data=data)
+    r = http_client.post('api/jobs/create', headers=auth_header, data=data)
     assert r.status_code == 409
     assert r.json == {'message': 'Job name already exists.'}
     assert not socketio_client.get_received('/client')
+
+    app.config["ENV"] = "production"
+
+    data = {
+        'gcode.name': 'test_file.gcode',
+        'gcode.path': "./test-file.gcode",
+        'name': 'test-job-2'
+    }
+    r = http_client.post('api/jobs/create', headers=auth_header, data=data)
+    received_events = socketio_client.get_received('/client')
+    assert r.status_code == 201
+    assert r.json == marshal(db_manager.get_jobs(name="test-job-2"), job_model, skip_none=True)
+    assert len(received_events) == 1
+    assert received_events[0]['name'] == 'jobs_updated'
+
+    files = os.listdir('files/')
+    assert len(files) == 1
+
+    with open("./test-file.gcode") as expected_f:
+        with open('files/' + files[0]) as f:
+            assert expected_f.read() == f.read()
+    os.unlink('files/' + files[0])
+
+    app.config["ENV"] = "development"
 
 
 def test_get_not_done_jobs(db_manager, jwt_blacklist_manager, http_client):
@@ -647,7 +672,7 @@ def test_reorder_job(db_manager, jwt_blacklist_manager, http_client):
     assert r.json == marshal([jobs[1], jobs[0], jobs[2], jobs[3]], job_model, skip_none=True)
 
 
-def test_reprint_job(db_manager, jwt_blacklist_manager, http_client):
+def test_reprint_job(db_manager, jwt_blacklist_manager, http_client, socketio_client, socketio_printer):
     user = db_manager.get_users(id=1)
     printer = db_manager.get_printers(id=1)
     files = []
@@ -704,6 +729,8 @@ def test_reprint_job(db_manager, jwt_blacklist_manager, http_client):
     r = http_client.put("api/jobs/" + str(job_id) + "/reprint", headers=auth_header)
     assert r.status_code == 200
     assert r.json == {'message': 'Job <test-job-0> enqueued for reprint.'}
+    assert socketio_client.get_received("/client") == [{'args': [None], 'name': 'jobs_updated', 'namespace': '/client'}]
+    assert socketio_printer.get_received("/printer") == []
 
     jobs = db_manager.get_jobs()
 

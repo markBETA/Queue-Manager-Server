@@ -5,7 +5,7 @@ This module implements the file manager test suite.
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
@@ -13,6 +13,8 @@ __status__ = "Development"
 import os
 import time
 from shutil import copyfile
+
+from ..file_manager import FileDescriptor
 
 
 def test_file_manager_class(db_manager, file_manager):
@@ -26,8 +28,15 @@ def test_file_manager_class(db_manager, file_manager):
 
     user = db_manager.get_users(id=1)
     file = FlaskFile("test-file.gcode", "./test-file.gcode")
+    file_descriptor = FileDescriptor(file.filename, flask_file_obj=file)
 
-    file_obj = file_manager.save_file(file, user, analise_after_save=False)
+    file_obj = file_manager.save_file(file_descriptor, user)
+    assert file_obj.name == file.filename
+    assert file_obj.user == user
+    assert os.path.isfile(file_obj.fullPath)
+
+    file_descriptor = FileDescriptor(file.filename, path="./test-file.gcode")
+    file_obj = file_manager.save_file(file_descriptor, user)
     assert file_obj.name == file.filename
     assert file_obj.user == user
     assert os.path.isfile(file_obj.fullPath)

@@ -5,7 +5,7 @@ This module implements the printer namespace resources test suite.
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
@@ -16,7 +16,7 @@ from flask_restplus import marshal
 from queuemanager.api.files.models import file_model
 
 
-def test_get_file(db_manager, jwt_blacklist_manager, http_client):
+def test_get_file(db_manager, jwt_blacklist_manager, http_client, app):
     user = db_manager.get_users(id=1)
     printer = db_manager.get_printers(id=1)
     file = db_manager.insert_file(user, "test", "./test-file.gcode")
@@ -78,7 +78,18 @@ def test_get_file(db_manager, jwt_blacklist_manager, http_client):
     r = http_client.get("/api/files/1", headers=auth_header)
     assert r.status_code == 200
     assert r.data.decode('utf-8') == open(file.fullPath, "r").read()
-    assert r.headers[0] == ('Content-Disposition', 'attachment; filename=test')
+    assert ('Content-Disposition', 'attachment; filename=test') in list(r.headers)
+
+    app.config["ENV"] = "production"
+
+    r = http_client.get("/api/files/1", headers=auth_header)
+    assert r.status_code == 200
+    assert ('Content-Type', 'application/octet-stream') in list(r.headers)
+    assert ('X-Accel-Redirect', '/files/download/1') in list(r.headers)
+    assert ('Content-Disposition', 'attachment; filename="test"') in list(r.headers)
+    assert ('Content-Length', '0') in list(r.headers)
+
+    app.config["ENV"] = "development"
 
 
 def test_get_file_info(db_manager, jwt_blacklist_manager, http_client):
