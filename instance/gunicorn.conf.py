@@ -13,7 +13,6 @@ if not os.path.exists(_RUN):
 loglevel = 'info'
 
 # Configure the socket address and the number of workers
-bind = 'unix:%s' % os.path.join(_ROOT, 'run/gunicorn.sock')
 workers = 1
 worker_class = 'eventlet'
 
