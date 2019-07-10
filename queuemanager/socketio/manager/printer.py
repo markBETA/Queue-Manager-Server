@@ -10,6 +10,8 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+from flask import session
+
 from .base_class import SocketIOManagerBase
 
 
@@ -67,21 +69,19 @@ class PrinterNamespaceManager(SocketIOManagerBase):
             self.printer_namespace.emit_job_recovered(job, sid=printer.sid)
 
     def printer_connected(self, sid, ip_address):
-        # Get the printer object
-        printer = self.db_manager.get_printers(id=1)
+        # Get the printer object and the actual SID
+        printer = self.db_manager.get_printers(id=session["identity"]["id"])
+        old_sid = printer.sid
 
-        # Check that the printer is not connected already
-        if printer.state.id != self.db_manager.printer_state_ids["Offline"]:
-            # If the printer is connected already, reject the new connection
-            return False
-        else:
-            # Set the sid as the printer sid
-            self.db_manager.update_printer(printer, sid=sid, ipAddress=ip_address)
-            return True
+        # Set the new SID as the printer SID
+        self.db_manager.update_printer(printer, sid=sid, ipAddress=ip_address)
+
+        # Return the old SID to disconnect it (if any)
+        return old_sid
 
     def printer_disconnected(self, sid):
         # Get the printer object
-        printer = self.db_manager.get_printers(id=1)
+        printer = self.db_manager.get_printers(id=session["identity"]["id"])
 
         # Change the printer state to offline
         if printer.sid == sid:
@@ -90,7 +90,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
 
     def printer_initial_data(self, state, extruders_info):
         # Get the printer object
-        printer = self.db_manager.get_printers(id=1)
+        printer = self.db_manager.get_printers(id=session["identity"]["id"])
 
         # If the printer isn't in Offline state, reject the initial data so isn't the real initial data
         if printer.state.stateString != "Offline":
@@ -116,7 +116,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
 
     def printer_state_updated(self, state):
         # Get the printer object
-        printer = self.db_manager.get_printers(id=1)
+        printer = self.db_manager.get_printers(id=session["identity"]["id"])
 
         self._update_printer_state(printer, state)
 
@@ -131,7 +131,7 @@ class PrinterNamespaceManager(SocketIOManagerBase):
 
     def printer_extruders_updated(self, extruders_info):
         # Get the printer object
-        printer = self.db_manager.get_printers(id=1)
+        printer = self.db_manager.get_printers(id=session["identity"]["id"])
 
         self._update_printer_extruders(printer, extruders_info)
 

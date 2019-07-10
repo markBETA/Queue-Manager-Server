@@ -13,7 +13,7 @@ __status__ = "Development"
 import uuid
 
 from flask import request, session
-from flask_socketio import emit
+from flask_socketio import emit, disconnect
 
 from .base_class import Namespace
 from ..definitions import socketio_auth_required
@@ -61,23 +61,32 @@ class PrinterNamespace(Namespace):
         """
         Event called when the printer is connected
         """
+        if set(session["identity"].keys()) != {"type", "id", "serial_number"}:
+            self.app.logger.info("Detected invalid access token identity. Disconnecting SID '{}'".format(request.sid))
+            disconnect()
+            return
+
+        if session["identity"]["type"] != "printer":
+            self.app.logger.info("Detected invalid access token type. Disconnecting SID '{}'".format(request.sid))
+            disconnect()
+            return
+
         try:
-            connection_allowed = self.socketio_manager.printer_connected(request.sid, request.remote_addr) and \
-                session["identity"].get("type") == "printer"
+            old_sid = self.socketio_manager.printer_connected(request.sid, request.remote_addr)
         except DBManagerError as e:
-            self.app.logger.error("Unable to save the printer connection at the database. Details: " + str(e))
-            return False
+            self.app.logger.error("Unable to update the printer connection at the database. Details: " + str(e))
+            disconnect()
+            return
 
-        if connection_allowed:
-            self.app.logger.info("Printer connected")
-        else:
-            self.app.logger.info("Printer already connected. New connection rejected")
+        # If the printer from the identity data already has got a SID, disconnect that SID first
+        if old_sid is not None:
+            disconnect(sid=old_sid)
 
-        if connection_allowed:
-            session["key"] = str(uuid.uuid4())
-            emit("session_key", session["key"])
+        # Send the session key to the printer
+        session["key"] = str(uuid.uuid4())
+        emit("session_key", session["key"])
 
-        return connection_allowed
+        self.app.logger.info("Printer connected")
 
     def on_disconnect(self):
         """

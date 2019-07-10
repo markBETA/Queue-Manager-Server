@@ -133,9 +133,15 @@ class ClientNamespace(Namespace):
         """
         Event called when the client is connected
         """
-        if session["identity"].get("type") != "user":
+        if set(session["identity"].keys()) != {"type", "id", "is_admin"}:
+            self.app.logger.info("Detected invalid access token identity. Disconnecting SID '{}'".format(request.sid))
+            disconnect()
+            return
+
+        if session["identity"]["type"] != "user":
             self.app.logger.info("Detected invalid access token type. Disconnecting SID '{}'".format(request.sid))
             disconnect()
+            return
 
         session["key"] = str(uuid.uuid4())
         emit("session_key", session["key"], broadcast=False, namespace=self.namespace)

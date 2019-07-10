@@ -120,19 +120,8 @@ def file_manager(app, db_manager, request):
 @pytest.fixture(scope='function')
 def socketio_client(app, session, db_manager, jwt_blacklist_manager, request):
     global _client_session_key
-    global _printer_session_key
 
     socketio_client = socketio.test_client(app)
-
-    access_token = create_access_token({
-        "type": "printer",
-        "id": 1,
-        "serial_number": "020.238778.0823"
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
-
-    socketio_client.connect("/printer", headers=auth_header)
 
     access_token = create_access_token({
         "type": "user",
@@ -153,10 +142,6 @@ def socketio_client(app, session, db_manager, jwt_blacklist_manager, request):
     if _client_session_key is None:
         raise RuntimeError("No session key received after successful connection.")
 
-    _printer_session_key = None
-
-    socketio_client.get_received('/printer')
-
     db_manager.update_session(session)
 
     socketio_mgr.set_db_manager(db_manager)
@@ -171,20 +156,9 @@ def socketio_client(app, session, db_manager, jwt_blacklist_manager, request):
 
 @pytest.fixture(scope='function')
 def socketio_printer(app, session, db_manager, jwt_blacklist_manager, request):
-    global _client_session_key
     global _printer_session_key
 
     socketio_client = socketio.test_client(app)
-
-    access_token = create_access_token({
-        "type": "user",
-        "id": 1,
-        "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
-
-    socketio_client.connect("/client", headers=auth_header)
 
     access_token = create_access_token({
         "type": "printer",
@@ -195,10 +169,6 @@ def socketio_printer(app, session, db_manager, jwt_blacklist_manager, request):
     auth_header = {"Authorization": "Bearer " + access_token}
 
     socketio_client.connect("/printer", headers=auth_header)
-
-    _client_session_key = None
-
-    socketio_client.get_received('/client')
 
     _printer_session_key = None
 

@@ -102,9 +102,8 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# keys
-instance/jwt.key
-instance/jwt.key.pub
-
 # files
-data/files/*
+uploaded_files/*
+
+# keys
+keys/*

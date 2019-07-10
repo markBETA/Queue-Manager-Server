@@ -44,18 +44,27 @@ def create_app(name=__name__, testing=False, init_db_manager_values=False, enabl
             # Load the instance development config
             app.config.from_object("instance.development.Config")
         elif env == "production":
-            # Load the instance development config
+            # Load the instance production config
             app.config.from_object("instance.production.Config")
+        elif env == "production-dds":
+            # Load the instance production config for the DDS servers
+            app.config.from_object("instance.production-dds.Config")
         else:
             raise RuntimeError("Unknown environment '{}'".format(env))
 
-    from logging import INFO, DEBUG
-
-    # Set the logger level
-    if app.config.get("DEBUG") > 1:
-        app.logger.setLevel(DEBUG)
+    # If the application is loaded from gunicorn, use it's own logger
+    if "gunicorn" in os.environ.get("SERVER_SOFTWARE", ""):
+        import logging
+        gunicorn_logger = logging.getLogger('gunicorn.error')
+        app.logger.handlers = gunicorn_logger.handlers
+        app.logger.setLevel(gunicorn_logger.level)
     else:
-        app.logger.setLevel(INFO)
+        from logging import INFO, DEBUG
+        # Set the logger level
+        if app.config.get("DEBUG") > 1:
+            app.logger.setLevel(DEBUG)
+        else:
+            app.logger.setLevel(INFO)
 
     app.logger.info("Loading server modules...")
 
@@ -69,6 +78,7 @@ def create_app(name=__name__, testing=False, init_db_manager_values=False, enabl
         if init_db_manager_values and "app-database" in enabled_modules:
             from .database import db_mgr
             db_mgr.init_static_values()
+            # If the server is in 'development' or 'testing' mode, initialize the printers and jobs state
             if app.config.get("ENV") in ("development", "testing"):
                 db_mgr.init_printers_state()
                 db_mgr.init_jobs_can_be_printed()

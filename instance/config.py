@@ -15,7 +15,7 @@ class Config(object):
         'app': 'postgresql+psycopg2://postgres:dev@postgres.dev.server/app'
     }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ECHO = False
+    SQLALCHEMY_ECHO = (DEBUG >= 2)
 
     RESTPLUS_VALIDATE = True
     SWAGGER_UI_DOC_EXPANSION = 'list'

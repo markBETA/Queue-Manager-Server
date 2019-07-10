@@ -260,7 +260,8 @@ def test_on_analyze_job(socketio_client, client_session_key, db_manager, file_ma
     assert received_events[1]['args'] == [None]
 
 
-def test_on_enqueue_job(socketio_client, client_session_key, db_manager, file_manager):
+def test_on_enqueue_job(app, socketio_client, socketio_printer, client_session_key, printer_session_key,
+                        db_manager, file_manager):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test-file", "/home/Marc/test")
     db_manager.insert_job("test-job", file, user)
@@ -279,6 +280,7 @@ def test_on_enqueue_job(socketio_client, client_session_key, db_manager, file_ma
     }
 
     initial_data = {
+        "session_key": printer_session_key,
         "state": "Ready",
         "extruders_info": [
             {
@@ -294,8 +296,8 @@ def test_on_enqueue_job(socketio_client, client_session_key, db_manager, file_ma
         ]
     }
 
-    from ...definitions import socketio_mgr
-    socketio_mgr.printer_initial_data(**initial_data)
+    socketio_printer.emit("initial_data", initial_data, namespace="/printer")
+
     socketio_client.get_received("/client")
     assert db_manager.get_printers(id=1).state.stateString == "Ready"
 
@@ -312,7 +314,7 @@ def test_on_enqueue_job(socketio_client, client_session_key, db_manager, file_ma
     assert received_events[1]['name'] == 'jobs_updated'
     assert received_events[1]['args'] == [None]
 
-    received_events = socketio_client.get_received("/printer")
+    received_events = socketio_printer.get_received("/printer")
 
     assert len(received_events) == 1
     assert received_events[0]['name'] == 'print_job'

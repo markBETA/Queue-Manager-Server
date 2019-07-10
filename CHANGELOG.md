@@ -22,3 +22,7 @@ Version 0.0.2 (BETA version)
     * Improved the Socket.IO manager class functions error detection.
     * Updated the application factory.
     * Updated the configuration files structure.
+    * Improved the production environment deployment with Gunicorn.
+    * Added the Domestic Data Streamers specific production config.
+    * Improved the printer connection authorization mechanism.
+    
