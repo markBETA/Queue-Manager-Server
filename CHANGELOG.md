@@ -33,3 +33,4 @@ Version 0.1.0
     * Now the server can be splitted to serve only the Socket.IO or the API namespaces.
     * Added and corrected documentation.
     * Minor error fixes.
+    * Code refactoring.
