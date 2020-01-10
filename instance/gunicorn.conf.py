@@ -10,7 +10,7 @@ if not os.path.exists(_RUN):
     os.mkdir(_RUN)
 
 # Set the logger configuration
-loglevel = 'info'
+loglevel = 'access'
 
 # Configure the socket address and the number of workers
 worker_class = 'eventlet'

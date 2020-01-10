@@ -2,7 +2,6 @@
 Config file of the Flask App.
 """
 
-import datetime
 import os
 
 
@@ -22,18 +21,11 @@ class Config(object):
 
     FILE_MANAGER_UPLOAD_DIR = './uploaded_files/'
 
-    REDIS_SERVER_HOST = 'redis.dev.server'
-    REDIS_SERVER_PORT = 6379
-    TOKEN_BLACKLIST_REDIS_DB = 0
+    SOCKETIO_MESSAGE_QUEUE = "redis://redis.dev.server:6379/1"
 
-    JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(seconds=45)
-    JWT_REFRESH_TOKEN_EXPIRES = datetime.timedelta(days=30)
-    JWT_BLACKLIST_ENABLED = True
-    JWT_BLACKLIST_TOKEN_CHECKS = ['access', 'refresh']
-    JWT_ERROR_MESSAGE_KEY = "message"
-    JWT_IDENTITY_CLAIM = "sub"
-    JWT_ALGORITHM = "RS256"
-
-    SOCKETIO_MESSAGE_QUEUE = None
+    IDENTITY_HEADER = "X-Identity"
+    AUTHORIZATION_SUBREQUEST_URL = "http://localhost:5001/"
+    AUTHORIZATION_SUBREQUEST_ENDPOINT = "/api/general/check_access_token"
+    AUTHORIZATION_SUBREQUEST_METHOD = "POST"
 
     CORS_ALLOWED_ORIGINS = None

@@ -1,11 +1,11 @@
 """
-This module defines the file storage manager class
+This module defines the file storage manager class.
 """
 
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
@@ -17,7 +17,6 @@ import warnings
 from datetime import timedelta
 
 import math
-from flask import current_app
 from werkzeug.utils import secure_filename
 
 from .exceptions import (
@@ -42,7 +41,7 @@ class FileDescriptor(object):
 
 class FileManager(object):
     """
-    This class implements the interface for save and retrieve files from the filesystem
+    This class implements the interface for save and retrieve files from the filesystem.
     """
     def __init__(self, app=None, file_data_prefix=";PrintInfo/",
                  file_data_end="/PrintInfo\n", db_manager: DBManager = None):
@@ -153,7 +152,7 @@ class FileManager(object):
         try:
             with open(os.devnull, 'w') as fp:
                 subprocess.run(["cp", origin, destination], check=True, stdout=fp, stderr=fp)
-        except (subprocess.CalledProcessError, OSError) as e:
+        except (subprocess.CalledProcessError, OSError):
             raise FilesystemError("Unable to save the file in the server storage")
 
     def init_app(self, app, create_upload_dir=True):
@@ -164,7 +163,7 @@ class FileManager(object):
         ):
             warnings.warn(
                 'FILE_MANAGER_UPLOAD_DIR not set. '
-                'Defaulting FILE_MANAGER_UPLOAD_DIR to "./upload_folder/".'
+                'Defaulting FILE_MANAGER_UPLOAD_DIR to "./data/files/".'
             )
 
         self.upload_dir = app.config.setdefault('FILE_MANAGER_UPLOAD_DIR ', './data/files')
@@ -186,11 +185,11 @@ class FileManager(object):
             try:
                 file_data = json.loads(file_data_str)
             except json.JSONDecodeError as e:
-                current_app.logger.error("The file data can't be loaded. Details: " + str(e))
+                self.app.logger.error("The file data can't be loaded. Details: " + str(e))
                 raise InvalidFileData("The file data can't be loaded. Details: " + str(e))
             self.db_manager.update_file(file, fileData=file_data)
         else:
-            current_app.logger.error(
+            self.app.logger.error(
                 "The file data can't be loaded. Details: The file don't contain the data dictionary")
             raise InvalidFileData("The file data can't be loaded. Details: The file don't contain the data dictionary")
 
@@ -203,8 +202,8 @@ class FileManager(object):
                     try:
                         self._identify_file_info(line[1:], file)
                     except (ValueError, TypeError):
-                        current_app.logger.error("Can't read the file '" + str(file) + "' information. "
-                                                 "Try to obtain it from the file data")
+                        self.app.logger.error("Can't read the file '" + str(file) + "' information. "
+                                              "Try to obtain it from the file data")
                         raise InvalidFileData("There was an error retrieving the file information")
                     if file.estimatedPrintingTime is not None and file.estimatedNeededMaterial is not None:
                         break
@@ -212,19 +211,19 @@ class FileManager(object):
     def set_job_allowed_config_from_file_data(self, job: Job):
         # Check that the file data is not empty
         if not job.file.fileData:
-            current_app.logger.error("Can't read the allowed config from the file data of the job '" + str(job) +
-                                     "'. Details: The file data can't be empty")
+            self.app.logger.error("Can't read the allowed config from the file data of the job '" + str(job) +
+                                  "'. Details: The file data can't be empty")
             raise InvalidFileData("The file data can't be empty")
 
         try:
             allowed_materials, allowed_extruder_types = self._get_allowed_materials_and_extruder_types(job.file)
         except KeyError as e:
-            current_app.logger.error("Can't read the allowed config from the file data of the job '" + str(job) +
-                                     "'. Details: The key " + str(e) + " is missing in the file data")
+            self.app.logger.error("Can't read the allowed config from the file data of the job '" + str(job) +
+                                  "'. Details: The key " + str(e) + " is missing in the file data")
             raise MissingFileDataKeys("The key " + str(e) + " is missing in the file data")
         except (ValueError, TypeError):
-            current_app.logger.error("Can't read the allowed config from the file data of the job '" + str(job) +
-                                     "'. Details: One of the values of the file data is corrupted")
+            self.app.logger.error("Can't read the allowed config from the file data of the job '" + str(job) +
+                                  "'. Details: One of the values of the file data is corrupted")
             raise InvalidFileData("One of the values of the file data is corrupted")
 
         # Add the allowed materials and extruder types to the job information
@@ -239,20 +238,20 @@ class FileManager(object):
     def set_file_information_from_file_data(self, file: File):
         # Check that the file data is not empty
         if not file.fileData:
-            current_app.logger.error("Can't read the file information from the data of the file '" + str(file) +
-                                     "'. Details: The file data can't be empty")
+            self.app.logger.error("Can't read the file information from the data of the file '" + str(file) +
+                                  "'. Details: The file data can't be empty")
             raise InvalidFileData("The file data can't be empty")
 
         # Get the fields to update of the file
         try:
             fields_to_update = self._get_file_print_information(file)
         except KeyError as e:
-            current_app.logger.error("Can't read the file information from the data of the file '" + str(file) +
-                                     "'. Details: The key " + str(e) + " is missing in the file data")
+            self.app.logger.error("Can't read the file information from the data of the file '" + str(file) +
+                                  "'. Details: The key " + str(e) + " is missing in the file data")
             raise MissingFileDataKeys("The key " + str(e) + " is missing in the file data")
         except (ValueError, TypeError):
-            current_app.logger.error("Can't read the file information from the data of the file '" + str(file) +
-                                     "'. Details: One of the values of the file data is corrupted")
+            self.app.logger.error("Can't read the file information from the data of the file '" + str(file) +
+                                  "'. Details: One of the values of the file data is corrupted")
             raise InvalidFileData("One of the values of the file data is corrupted")
 
         # Update the fields in the file object
@@ -263,22 +262,22 @@ class FileManager(object):
     def set_job_estimated_needed_material_from_file_data(self, job: Job):
         # Check that the file data is not empty
         if not job.file.fileData:
-            current_app.logger.error("Can't read the estimated needed material from the file data of the job '"
-                                     + str(job) + "'. Details: The file data can't be empty")
+            self.app.logger.error("Can't read the estimated needed material from the file data of the job '"
+                                  + str(job) + "'. Details: The file data can't be empty")
             raise InvalidFileData("The file data can't be empty")
         
         # Get the fields to update of the file
         try:
             extruders_estimated_needed_materials = self._get_extruder_estimated_needed_material(job.file)
         except KeyError as e:
-            current_app.logger.error("Can't read the estimated needed material from the file data of the job '"
-                                     + str(job) + "'. Details: The key " + str(e) + " is missing in the file data")
+            self.app.logger.error("Can't read the estimated needed material from the file data of the job '"
+                                  + str(job) + "'. Details: The key " + str(e) + " is missing in the file data")
             raise MissingFileDataKeys("The key " + str(e) + " is missing in the file data")
         except (ValueError, TypeError):
-            current_app.logger.error("Can't read the estimated needed material from the file data of the job '"
-                                     + str(job) + "'. Details: One of the values of the file data is corrupted")
+            self.app.logger.error("Can't read the estimated needed material from the file data of the job '"
+                                  + str(job) + "'. Details: One of the values of the file data is corrupted")
             raise InvalidFileData("One of the values of the file data is corrupted")
-        
+
         # Update the job extruders data
         for estimated_needed_material, index in extruders_estimated_needed_materials:
             # Get the job extruder data for this extruder index

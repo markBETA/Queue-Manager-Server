@@ -6,7 +6,7 @@ In this package has all needed modules for the mentioned server.
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
@@ -26,9 +26,9 @@ def create_app(name=__name__, testing=False, init_db_manager_values=False, enabl
             "error-handlers",
             "app-database",
             "file-storage",
-            "blacklist-manager",
             "socketio",
-            "api"
+            "api",
+            "identity-mgr"
         }
 
     from flask import Flask
@@ -85,30 +85,43 @@ def create_app(name=__name__, testing=False, init_db_manager_values=False, enabl
 
         # Init file manager
         if "file-storage" in enabled_modules:
-            from .file_storage import file_mgr
-            file_mgr.init_app(app, create_upload_dir=not testing)
-
-        # Init the blacklist manager
-        if "blacklist-manager" in enabled_modules:
-            from .blacklist_manager import jwt_blacklist_manager
-            jwt_blacklist_manager.init_app(app)
+            from .file_storage import init_app as file_init_app
+            file_init_app(app, create_upload_dir=not testing)
 
         # Set the exception handlers
         if "error-handlers" in enabled_modules:
             from .error_handlers import set_exception_handlers
             set_exception_handlers(app)
 
+        # Init the identity management module
+        if "identity-mgr" in enabled_modules:
+            from .identity import init_app as identity_init_app
+            identity_init_app(app)
+
         # Init the socket.io interface
         if "socketio" in enabled_modules:
+            if app.config['CORS_ALLOWED_ORIGINS'] is None:
+                cors_allowed_origins = "*"
+            else:
+                cors_allowed_origins = app.config['CORS_ALLOWED_ORIGINS']
             from .socketio import init_app as socketio_init_app
             socketio_init_app(
-                app, logger=(app.config.get("DEBUG") > 0), message_queue=app.config['SOCKETIO_MESSAGE_QUEUE']
+                app, logger=(app.config.get("DEBUG") > 0), message_queue=app.config['SOCKETIO_MESSAGE_QUEUE'],
+                cors_allowed_origins=cors_allowed_origins
             )
 
         # Register the API blueprint
         if "api" in enabled_modules:
             from .api import init_app as api_init_app
             api_init_app(app)
+
+        # Init the socket.io external interface
+        if "socketio-ext" in enabled_modules:
+            from .socketio import init_app as socketio_init_app
+            socketio_init_app(
+                app, logger=(app.config.get("DEBUG") > 0), message_queue=app.config['SOCKETIO_MESSAGE_QUEUE'],
+                external=True
+            )
 
         # Init Flask-CORS plugin
         if "flask-cors" in enabled_modules:

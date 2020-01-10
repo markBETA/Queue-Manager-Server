@@ -1,5 +1,5 @@
 """
-This module defines the all the api resources for the files namespace.
+This module implements the identity header related marshmallow schemas testing.
 """
 
 __author__ = "Marc Bermejo"
@@ -10,10 +10,4 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from .definitions import api
-from .models import (
-    file_model
-)
-from .resources import (
-    File, FileInfo
-)
+# TODO: Tests

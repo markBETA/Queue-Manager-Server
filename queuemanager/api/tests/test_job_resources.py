@@ -1,26 +1,27 @@
 """
-This module implements the job namespace resources test suite.
+This module implements the job namespace API resources test suite.
 """
 
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
 import os
+import json
+
 from io import BytesIO
 from shutil import copyfile
 
-from flask_jwt_extended import create_access_token, decode_token
 from flask_restplus import marshal
 
 from queuemanager.api.jobs.models import job_model, job_state_model
 
 
-def test_get_jobs(db_manager, jwt_blacklist_manager, http_client):
+def test_get_jobs(db_manager, http_client):
     user = db_manager.get_users(id=1)
     printer = db_manager.get_printers(id=1)
     files = []
@@ -42,33 +43,29 @@ def test_get_jobs(db_manager, jwt_blacklist_manager, http_client):
             db_manager.set_printing_job(jobs[i])
             db_manager.set_finished_job(jobs[i])
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "printer",
         "id": printer.id,
         "serial_number": printer.serialNumber
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.get("api/jobs")
     assert r.status_code == 401
-    assert r.json == {"message": "Missing Authorization Header"}
+    assert r.json == {"message": "Missing Identity Header"}
 
-    r = http_client.get("api/jobs", headers={"Authorization": "Bearer "}, json={})
+    r = http_client.get("api/jobs", headers={"X-Identity": "Bearer "}, json={})
     assert r.status_code == 422
-    assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+    assert r.json == {'message': "Bad Authorization header. Expected JSON value"}
 
     r = http_client.get("api/jobs", headers=auth_header)
     assert r.status_code == 422
-    assert r.json == {'message': 'Only user access tokens are allowed.'}
+    assert r.json == {'message': 'Only users are allowed to this API resource.'}
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": user.id,
         "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.get("api/jobs", headers=auth_header)
     assert r.status_code == 200
@@ -127,52 +124,35 @@ def test_get_jobs(db_manager, jwt_blacklist_manager, http_client):
     assert r.json == marshal([jobs[2], jobs[1]], job_model, skip_none=True)
 
 
-def test_create_job(db_manager, jwt_blacklist_manager, http_client, socketio_client, app):
+def test_create_job(db_manager, http_client, socketio_client, app):
     user = db_manager.get_users(id=1)
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "printer",
         "id": 1,
         "serial_number": "000.00000.0000"
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.post('api/jobs/create')
     assert r.status_code == 401
-    assert r.json == {"message": "Missing Authorization Header"}
+    assert r.json == {"message": "Missing Identity Header"}
     assert not socketio_client.get_received('/client')
 
-    r = http_client.post('api/jobs/create', headers={"Authorization": "Bearer "}, json={})
+    r = http_client.post('api/jobs/create', headers={"X-Identity": "Bearer "}, json={})
     assert r.status_code == 422
-    assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+    assert r.json == {'message': "Bad Authorization header. Expected JSON value"}
     assert not socketio_client.get_received('/client')
 
     r = http_client.post('api/jobs/create', headers=auth_header)
     assert r.status_code == 422
-    assert r.json == {'message': 'Only user access tokens are allowed.'}
+    assert r.json == {'message': 'Only users are allowed to this API resource.'}
     assert not socketio_client.get_received('/client')
 
-    access_token = create_access_token({
-        "type": "user",
-        # "id": user.id,
-        "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
-
-    r = http_client.post('api/jobs/create', headers=auth_header)
-    assert r.status_code == 422
-    assert r.json == {'message': "Can't retrieve the user ID from the access token."}
-    assert not socketio_client.get_received('/client')
-
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": user.id,
         "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     wrong_data = {
         'name': 'test-job'
@@ -190,13 +170,11 @@ def test_create_job(db_manager, jwt_blacklist_manager, http_client, socketio_cli
     assert r.json == {'message': 'No job name specified with the request.'}
     assert not socketio_client.get_received('/client')
 
-    access_token_fail = create_access_token({
+    auth_header_fail = {"X-Identity": json.dumps({
         "type": "user",
         "id": 100,
         "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token_fail))
-    auth_header_fail = {"Authorization": "Bearer " + access_token_fail}
+    })}
     data = {
         'gcode': (BytesIO(open("./test-file.gcode").read().encode('utf-8')), 'test_file.gcode'),
         'name': 'test-job'
@@ -214,6 +192,7 @@ def test_create_job(db_manager, jwt_blacklist_manager, http_client, socketio_cli
 
     r = http_client.post('api/jobs/create', headers=auth_header, data=data)
     received_events = socketio_client.get_received('/client')
+    print(r.json)
     assert r.status_code == 201
     assert r.json == marshal(db_manager.get_jobs(id=1), job_model, skip_none=True)
     assert len(received_events) == 1
@@ -261,7 +240,7 @@ def test_create_job(db_manager, jwt_blacklist_manager, http_client, socketio_cli
     app.config["ENV"] = "development"
 
 
-def test_get_not_done_jobs(db_manager, jwt_blacklist_manager, http_client):
+def test_get_not_done_jobs(db_manager, http_client):
     user = db_manager.get_users(id=1)
     printer = db_manager.get_printers(id=1)
     files = []
@@ -277,33 +256,29 @@ def test_get_not_done_jobs(db_manager, jwt_blacklist_manager, http_client):
             db_manager.set_finished_job(jobs[i])
             db_manager.set_done_job(jobs[i], succeed=True)
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "printer",
         "id": 1,
         "serial_number": "000.00000.0000"
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.get("api/jobs/not_done")
     assert r.status_code == 401
-    assert r.json == {"message": "Missing Authorization Header"}
+    assert r.json == {"message": "Missing Identity Header"}
 
-    r = http_client.get("api/jobs/not_done", headers={"Authorization": "Bearer "}, json={})
+    r = http_client.get("api/jobs/not_done", headers={"X-Identity": "Bearer "}, json={})
     assert r.status_code == 422
-    assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+    assert r.json == {'message': "Bad Authorization header. Expected JSON value"}
 
     r = http_client.get("api/jobs/not_done", headers=auth_header)
     assert r.status_code == 422
-    assert r.json == {'message': 'Only user access tokens are allowed.'}
+    assert r.json == {'message': 'Only users are allowed to this API resource.'}
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": user.id,
         "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.get("api/jobs/not_done?order_by_priority=fail", headers=auth_header)
     assert r.status_code == 400
@@ -323,75 +298,67 @@ def test_get_not_done_jobs(db_manager, jwt_blacklist_manager, http_client):
     assert r.json == marshal([jobs[0], jobs[2], jobs[1], jobs[3]], job_model, skip_none=True)
 
 
-def test_get_job_states(db_manager, jwt_blacklist_manager, http_client):
+def test_get_job_states(db_manager, http_client):
     job_states = db_manager.get_job_states()
     user = db_manager.get_users(id=1)
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "printer",
         "id": 1,
         "serial_number": "000.00000.0000"
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.get("api/jobs/states")
     assert r.status_code == 401
-    assert r.json == {"message": "Missing Authorization Header"}
+    assert r.json == {"message": "Missing Identity Header"}
 
-    r = http_client.get("api/jobs/states", headers={"Authorization": "Bearer "}, json={})
+    r = http_client.get("api/jobs/states", headers={"X-Identity": "Bearer "}, json={})
     assert r.status_code == 422
-    assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+    assert r.json == {'message': "Bad Authorization header. Expected JSON value"}
 
     r = http_client.get("api/jobs/states", headers=auth_header)
     assert r.status_code == 422
-    assert r.json == {'message': 'Only user access tokens are allowed.'}
+    assert r.json == {'message': 'Only users are allowed to this API resource.'}
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": user.id,
         "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.get("api/jobs/states", headers=auth_header)
     assert r.status_code == 200
     assert r.json == marshal(job_states, job_state_model)
 
 
-def test_get_job(db_manager, jwt_blacklist_manager, http_client):
+def test_get_job(db_manager, http_client):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "/home/Marc/test")
     job = db_manager.insert_job("test", file, user)
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "printer",
         "id": 1,
         "serial_number": "000.00000.0000"
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.get("api/jobs/"+str(job.id))
     assert r.status_code == 401
-    assert r.json == {"message": "Missing Authorization Header"}
+    assert r.json == {"message": "Missing Identity Header"}
 
-    r = http_client.get("api/jobs/"+str(job.id), headers={"Authorization": "Bearer "}, json={})
+    r = http_client.get("api/jobs/"+str(job.id), headers={"X-Identity": "Bearer "}, json={})
     assert r.status_code == 422
-    assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+    assert r.json == {'message': "Bad Authorization header. Expected JSON value"}
 
     r = http_client.get("api/jobs/"+str(job.id), headers=auth_header)
     assert r.status_code == 422
-    assert r.json == {'message': 'Only user access tokens are allowed.'}
+    assert r.json == {'message': 'Only users are allowed to this API resource.'}
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": user.id,
         "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.get("api/jobs/100", headers=auth_header)
     assert r.status_code == 404
@@ -402,50 +369,34 @@ def test_get_job(db_manager, jwt_blacklist_manager, http_client):
     assert r.json == marshal(job, job_model, skip_none=True)
 
 
-def test_delete_job(db_manager, jwt_blacklist_manager, http_client):
+def test_delete_job(db_manager, http_client):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "./test-file.gcode")
     job = db_manager.insert_job("test", file, user)
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "printer",
         "id": 1,
         "serial_number": "000.00000.0000"
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.delete("api/jobs/" + str(job.id))
     assert r.status_code == 401
-    assert r.json == {"message": "Missing Authorization Header"}
+    assert r.json == {"message": "Missing Identity Header"}
 
-    r = http_client.delete("api/jobs/" + str(job.id), headers={"Authorization": "Bearer "}, json={})
+    r = http_client.delete("api/jobs/" + str(job.id), headers={"X-Identity": "Bearer "}, json={})
     assert r.status_code == 422
-    assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+    assert r.json == {'message': "Bad Authorization header. Expected JSON value"}
 
     r = http_client.delete("api/jobs/" + str(job.id), headers=auth_header)
     assert r.status_code == 422
-    assert r.json == {'message': 'Only user access tokens are allowed.'}
+    assert r.json == {'message': 'Only users are allowed to this API resource.'}
 
-    access_token = create_access_token({
-        "type": "user",
-        # "id": user.id,
-        "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
-
-    r = http_client.delete("api/jobs/" + str(job.id), headers=auth_header)
-    assert r.status_code == 422
-    assert r.json == {'message': "Can't retrieve the user ID from the access token."}
-
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": 2,
         "is_admin": False
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.delete("api/jobs/"+str(job.id)+"?delete_file=fail", headers=auth_header)
     assert r.status_code == 400
@@ -462,13 +413,11 @@ def test_delete_job(db_manager, jwt_blacklist_manager, http_client):
     assert r.status_code == 401
     assert r.json == {'message': "Only admin users can delete a job created by another user."}
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": user.id,
         "is_admin": False
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.delete("api/jobs/"+str(job.id)+"?delete_file=false", headers=auth_header)
     assert r.status_code == 200
@@ -479,13 +428,11 @@ def test_delete_job(db_manager, jwt_blacklist_manager, http_client):
 
     job = db_manager.insert_job("test", file, user)
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": 2,
         "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.delete("api/jobs/" + str(job.id) + "?delete_file=false", headers=auth_header)
     assert r.status_code == 200
@@ -504,50 +451,34 @@ def test_delete_job(db_manager, jwt_blacklist_manager, http_client):
     assert db_manager.get_jobs(id=job.id) is None
 
 
-def test_put_job(db_manager, jwt_blacklist_manager, http_client):
+def test_put_job(db_manager, http_client):
     user = db_manager.get_users(id=1)
     file = db_manager.insert_file(user, "test", "./test-file.gcode")
     job = db_manager.insert_job("test", file, user)
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "printer",
         "id": 1,
         "serial_number": "000.00000.0000"
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.put("api/jobs/" + str(job.id), json={})
     assert r.status_code == 401
-    assert r.json == {"message": "Missing Authorization Header"}
+    assert r.json == {"message": "Missing Identity Header"}
 
-    r = http_client.put("api/jobs/" + str(job.id), headers={"Authorization": "Bearer "}, json={})
+    r = http_client.put("api/jobs/" + str(job.id), headers={"X-Identity": "Bearer "}, json={})
     assert r.status_code == 422
-    assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+    assert r.json == {'message': "Bad Authorization header. Expected JSON value"}
 
     r = http_client.put("api/jobs/" + str(job.id), headers=auth_header, json={})
     assert r.status_code == 422
-    assert r.json == {'message': 'Only user access tokens are allowed.'}
+    assert r.json == {'message': 'Only users are allowed to this API resource.'}
 
-    access_token = create_access_token({
-        "type": "user",
-        # "id": user.id,
-        "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
-
-    r = http_client.put("api/jobs/" + str(job.id), headers=auth_header, json={})
-    assert r.status_code == 422
-    assert r.json == {'message': "Can't retrieve the user ID from the access token."}
-
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": 2,
         "is_admin": False
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.put("api/jobs/100", headers=auth_header, json={})
     assert r.status_code == 404
@@ -557,26 +488,22 @@ def test_put_job(db_manager, jwt_blacklist_manager, http_client):
     assert r.status_code == 401
     assert r.json == {'message': 'Only admin users can delete a job created by another user.'}
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": user.id,
         "is_admin": False
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.put("api/jobs/" + str(job.id), headers=auth_header, json={"name": "test1"})
     job = db_manager.get_jobs(id=job.id)
     assert r.status_code == 200
     assert r.json == marshal(job, job_model, skip_none=True)
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": 2,
         "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.put("api/jobs/1", headers=auth_header, json={"don't_fail": 0, "name": "test2"})
     job = db_manager.get_jobs(id=job.id)
@@ -590,7 +517,7 @@ def test_put_job(db_manager, jwt_blacklist_manager, http_client):
     assert r.json == {'message': 'Job name already exists.'}
 
 
-def test_reorder_job(db_manager, jwt_blacklist_manager, http_client):
+def test_reorder_job(db_manager, http_client):
     user = db_manager.get_users(id=1)
     files = []
     jobs = []
@@ -599,45 +526,39 @@ def test_reorder_job(db_manager, jwt_blacklist_manager, http_client):
         jobs.append(db_manager.insert_job("test-job-{}".format(str(i)), files[-1], user))
         db_manager.enqueue_created_job(jobs[i])
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "printer",
         "id": 1,
         "serial_number": "000.00000.0000"
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.put("api/jobs/1/reorder", json={"previous_job_id": 2})
     assert r.status_code == 401
-    assert r.json == {"message": "Missing Authorization Header"}
+    assert r.json == {"message": "Missing Identity Header"}
 
-    r = http_client.put("api/jobs/1/reorder", headers={"Authorization": "Bearer "}, json={"previous_job_id": 2})
+    r = http_client.put("api/jobs/1/reorder", headers={"X-Identity": "Bearer "}, json={"previous_job_id": 2})
     assert r.status_code == 422
-    assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+    assert r.json == {'message': "Bad Authorization header. Expected JSON value"}
 
     r = http_client.put("api/jobs/1/reorder", headers=auth_header, json={"previous_job_id": 2})
     assert r.status_code == 422
-    assert r.json == {'message': 'Only user access tokens are allowed.'}
+    assert r.json == {'message': 'Only users are allowed to this API resource.'}
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": user.id,
         "is_admin": False
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.put("api/jobs/1/reorder", headers=auth_header, json={"previous_job_id": 2})
     assert r.status_code == 401
     assert r.json == {'message': "Only admin users can reorder jobs."}
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": user.id,
         "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.put("api/jobs/100/reorder", headers=auth_header, json={"previous_job_id": 2})
     assert r.status_code == 404
@@ -672,7 +593,7 @@ def test_reorder_job(db_manager, jwt_blacklist_manager, http_client):
     assert r.json == marshal([jobs[1], jobs[0], jobs[2], jobs[3]], job_model, skip_none=True)
 
 
-def test_reprint_job(db_manager, jwt_blacklist_manager, http_client, socketio_client, socketio_printer):
+def test_reprint_job(db_manager, http_client, socketio_client, socketio_printer):
     user = db_manager.get_users(id=1)
     printer = db_manager.get_printers(id=1)
     files = []
@@ -688,33 +609,29 @@ def test_reprint_job(db_manager, jwt_blacklist_manager, http_client, socketio_cl
     db_manager.set_done_job(jobs[0], True)
     job_id = jobs[0].id
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "printer",
         "id": 1,
         "serial_number": "000.00000.0000"
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.put("api/jobs/" + str(job_id) + "/reprint", json={"previous_job_id": 2})
     assert r.status_code == 401
-    assert r.json == {"message": "Missing Authorization Header"}
+    assert r.json == {"message": "Missing Identity Header"}
 
-    r = http_client.put("api/jobs/" + str(job_id) + "/reprint", headers={"Authorization": "Bearer "})
+    r = http_client.put("api/jobs/" + str(job_id) + "/reprint", headers={"X-Identity": "Bearer "}, json={})
     assert r.status_code == 422
-    assert r.json == {'message': "Bad Authorization header. Expected value 'Bearer <JWT>'"}
+    assert r.json == {'message': "Bad Authorization header. Expected JSON value"}
 
     r = http_client.put("api/jobs/" + str(job_id) + "/reprint", headers=auth_header)
     assert r.status_code == 422
-    assert r.json == {'message': 'Only user access tokens are allowed.'}
+    assert r.json == {'message': 'Only users are allowed to this API resource.'}
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": user.id,
         "is_admin": False
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     r = http_client.put("api/jobs/100/reprint", headers=auth_header)
     assert r.status_code == 404

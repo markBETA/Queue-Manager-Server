@@ -5,7 +5,7 @@ This module defines the all the global variables needed API namespaces
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
@@ -29,15 +29,15 @@ api = Api(
     version='0.1',
     description='This API manages all the data operations for the queue manager',
     authorizations={
-        'user_access_jwt': {
+        'user_identity': {
             "type": "apiKey",
             "in": "header",
-            "name": "Authorization",
+            "name": "X-Identity",
         },
-        'printer_access_jwt': {
+        'printer_identity': {
             "type": "apiKey",
             "in": "header",
-            "name": "Authorization",
+            "name": "X-Identity",
         }
     },
 )

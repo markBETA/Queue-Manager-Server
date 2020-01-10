@@ -1,22 +1,22 @@
 """
-This module defines the all the api resources for the jobs namespace
+This module defines the all the API resources for the printer namespace.
 """
 
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from flask_jwt_extended import jwt_required
 from flask_restplus import Resource, marshal
 
 from .definitions import api
 from .models import (
     printer_model, printer_material_model, printer_extruder_type_model
 )
+from ...identity import identity_mgr
 from ...database import db_mgr as db
 
 
@@ -26,10 +26,10 @@ class Printer(Resource):
     /printer
     """
     @api.doc(id="get_printer")
-    @api.doc(security=["user_access_jwt", "printer_access_jwt"])
+    @api.doc(security=["user_identity", "printer_identity"])
     @api.response(200, "Success", printer_model)
     @api.response(500, "Unable to read the data from the database")
-    @jwt_required
+    @identity_mgr.identity_required()
     def get(self):
         """
         Returns the printer data
@@ -45,10 +45,10 @@ class PrinterMaterials(Resource):
     /printer/materials
     """
     @api.doc(id="get_printer_materials")
-    @api.doc(security=["user_access_jwt", "printer_access_jwt"])
+    @api.doc(security=["user_identity", "printer_identity"])
     @api.response(200, "Success", [printer_material_model])
     @api.response(500, "Unable to read the data from the socketio_printer")
-    @jwt_required
+    @identity_mgr.identity_required()
     def get(self):
         """
         Returns all the known printer materials
@@ -64,10 +64,10 @@ class PrinterExtruderTypes(Resource):
     /printer/extruder_types
     """
     @api.doc(id="get_printer_extruder_types")
-    @api.doc(security=["user_access_jwt", "printer_access_jwt"])
+    @api.doc(security=["user_identity", "printer_identity"])
     @api.response(200, "Success", [printer_extruder_type_model])
     @api.response(500, "Unable to read the data from the socketio_printer")
-    @jwt_required
+    @identity_mgr.identity_required()
     def get(self):
         """
         Returns all the known printer extruder types

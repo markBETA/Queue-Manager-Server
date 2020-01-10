@@ -5,7 +5,7 @@ This module defines the all the API routes, namespaces, and resources
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
@@ -13,16 +13,12 @@ __status__ = "Development"
 from .definitions import api, api_bp
 from .files import api as files_ns
 from .jobs import api as jobs_ns
-from .jwt_manager import jwt_manager
 from .printer import api as printer_ns
 from .users import api as users_ns
 
 
-def init_app(app):
+def init_app(app, *_args, **_kwargs):
     """ Initialize the API main object """
-    # Initialize the JWT manager object
-    jwt_manager.init_app(app)
-
     # Set the API docs enabled or disabled
     api._doc = ('/doc' if app.config.get("DEBUG") > 0 else False)
     # Initialize the API object
@@ -39,5 +35,4 @@ def init_app(app):
 
     from ..error_handlers import set_exception_handlers
     # Set the error handlers from the API object
-    jwt_manager.set_error_handler_callbacks(api)
     set_exception_handlers(api, from_api=True)

@@ -1,6 +1,6 @@
 import os
-
 import pytest
+
 from sqlalchemy.orm import close_all_sessions
 
 from ... import create_app
@@ -77,8 +77,9 @@ def session(db, request):
 
 
 @pytest.fixture(scope='function')
-def db_manager(session):
+def db_manager(app, session):
     """Creates a new socketio_printer DBManager instance for a test."""
+    db_mgr.init_app(app)
     db_mgr.update_session(session)
     db_mgr.init_static_values()
     db_mgr.init_printers_state()

@@ -1,5 +1,5 @@
 """
-This module defines the file storage manager.
+This module implements the identity header management
 """
 
 __author__ = "Marc Bermejo"
@@ -10,14 +10,9 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from .file_manager import FileManager, FileDescriptor
-
-################
-# FILE MANAGER #
-################
-
-file_mgr = FileManager()
+from .exceptions import IdentityManagerError, MissingIdentityHeader, IdentityValidationError
+from .definitions import identity_mgr
 
 
 def init_app(app, *args, **kwargs):
-    file_mgr.init_app(app, *args, **kwargs)
+    identity_mgr.init_app(app, *args, **kwargs)

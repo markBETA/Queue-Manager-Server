@@ -12,9 +12,6 @@ class Config(_Config):
         'app': 'postgresql+psycopg2://postgres:dev@postgres.dev.server/app_test'
     }
 
-    TOKEN_BLACKLIST_REDIS_DB = 9
+    SOCKETIO_MESSAGE_QUEUE = None
 
     FILE_MANAGER_UPLOAD_DIR = './files/'
-
-    JWT_SECRET_KEY = 'super-secret'
-    JWT_ALGORITHM = 'HS256'

@@ -25,4 +25,11 @@ Version 0.0.2 (BETA version)
     * Improved the production environment deployment with Gunicorn.
     * Added the Domestic Data Streamers specific production config.
     * Improved the printer connection authorization mechanism.
-    
+
+Version 0.1.0
+=============
+    * Added the identity module for retrieving the identity of the users
+    * Removed the blacklist module.
+    * Now the server can be splitted to serve only the Socket.IO or the API namespaces.
+    * Added and corrected documentation.
+    * Minor error fixes.

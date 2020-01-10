@@ -5,7 +5,7 @@ This module implements the client namespace related marshmallow schemas testing.
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
@@ -15,7 +15,7 @@ from datetime import timedelta
 from queuemanager.socketio.schemas import (
     EmitJobAnalyzeDoneSchema, EmitJobAnalyzeErrorSchema, EmitJobEnqueueDoneSchema, EmitJobEnqueueErrorSchema,
     EmitPrinterDataUpdatedSchema, EmitPrinterTemperaturesUpdatedSchema, EmitJobProgressUpdatedSchema,
-    OnAnalyzeJob, OnEnqueueJob, EmitAnalyzeErrorHelper, EmitEnqueueErrorHelper, EmitPrinterTemperaturesUpdatedHelper
+    OnAnalyzeJobSchema, OnEnqueueJobSchema, EmitAnalyzeErrorHelper, EmitEnqueueErrorHelper, EmitPrinterTemperaturesUpdatedHelper
 )
 
 
@@ -208,7 +208,7 @@ def test_on_analyze_job_schema(db_manager):
         "job_id": 1,
     }
 
-    load_result = OnAnalyzeJob().load(initial_data)
+    load_result = OnAnalyzeJobSchema().load(initial_data)
 
     assert len(load_result.errors) == 0
 
@@ -218,14 +218,14 @@ def test_on_analyze_job_schema(db_manager):
 
     initial_data["job_id"] = "fail"
 
-    load_result = OnAnalyzeJob().load(initial_data)
+    load_result = OnAnalyzeJobSchema().load(initial_data)
 
     assert len(load_result.errors) == 1
     assert load_result.errors["job_id"] == ['Not a valid integer.']
 
     del initial_data["job_id"]
 
-    load_result = OnAnalyzeJob().load(initial_data)
+    load_result = OnAnalyzeJobSchema().load(initial_data)
 
     assert len(load_result.errors) == 1
     assert load_result.errors["job_id"] == ['Missing data for required field.']
@@ -236,7 +236,7 @@ def test_on_enqueue_job_schema(db_manager):
         "job_id": 1,
     }
 
-    load_result = OnEnqueueJob().load(initial_data)
+    load_result = OnEnqueueJobSchema().load(initial_data)
 
     assert len(load_result.errors) == 0
 
@@ -246,14 +246,14 @@ def test_on_enqueue_job_schema(db_manager):
 
     initial_data["job_id"] = "fail"
 
-    load_result = OnEnqueueJob().load(initial_data)
+    load_result = OnEnqueueJobSchema().load(initial_data)
 
     assert len(load_result.errors) == 1
     assert load_result.errors["job_id"] == ['Not a valid integer.']
 
     del initial_data["job_id"]
 
-    load_result = OnEnqueueJob().load(initial_data)
+    load_result = OnEnqueueJobSchema().load(initial_data)
 
     assert len(load_result.errors) == 1
     assert load_result.errors["job_id"] == ['Missing data for required field.']

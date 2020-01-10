@@ -5,7 +5,7 @@ This module defines all schemas used by the events emitted and received by the c
 __author__ = "Marc Bermejo"
 __credits__ = ["Marc Bermejo"]
 __license__ = "GPL-3.0"
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
@@ -61,11 +61,11 @@ class EmitJobProgressUpdatedSchema(CurrentJobInfoSchema):
     pass
 
 
-class OnAnalyzeJob(Schema):
+class OnAnalyzeJobSchema(Schema):
     """ Schema of the 'analyze_job' event that the server is listening for """
     job_id = fields.Integer(required=True)
 
 
-class OnEnqueueJob(Schema):
+class OnEnqueueJobSchema(Schema):
     """ Schema of the 'enqueue_job' event that the server is listening for """
     job_id = fields.Integer(required=True)

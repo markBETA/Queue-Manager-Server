@@ -1,11 +1,10 @@
 import os
-
+import json
 import pytest
-from flask_jwt_extended import create_access_token, decode_token
+
 from sqlalchemy.orm import close_all_sessions
 
 from ... import create_app
-from ...blacklist_manager import jwt_blacklist_manager as _jwt_blacklist_manager
 from ...database import db as _db
 from ...database import db_mgr
 from ...file_storage import FileManager
@@ -27,11 +26,11 @@ def app(request):
     """Session-wide test `Flask` application."""
     enabled_modules = {
         "error-handlers",
-        "blacklist-manager",
         "app-database",
         "file-storage",
         "socketio",
-        "api"
+        "api",
+        "identity-mgr"
     }
     app = create_app(__name__, testing=True, enabled_modules=enabled_modules)
 
@@ -79,25 +78,15 @@ def session(db, request):
 
 
 @pytest.fixture(scope='function')
-def db_manager(session):
+def db_manager(app, session):
     """Creates a new socketio_printer DBManager instance for a test."""
+    db_mgr.init_app(app)
     db_mgr.update_session(session)
     db_mgr.init_static_values()
     db_mgr.init_printers_state()
     db_mgr.init_jobs_can_be_printed()
 
     return db_mgr
-
-
-@pytest.fixture(scope='function')
-def jwt_blacklist_manager(app, request, db_manager):
-    _jwt_blacklist_manager.redis_store.flushdb()
-
-    def teardown():
-        _jwt_blacklist_manager.redis_store.flushdb()
-
-    request.addfinalizer(teardown)
-    return _jwt_blacklist_manager
 
 
 @pytest.fixture(scope='function')
@@ -118,18 +107,16 @@ def file_manager(app, db_manager, request):
 
 
 @pytest.fixture(scope='function')
-def socketio_client(app, session, db_manager, jwt_blacklist_manager, request):
+def socketio_client(app, session, db_manager, request):
     global _client_session_key
 
     socketio_client = socketio.test_client(app)
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "user",
         "id": 1,
         "is_admin": True
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     socketio_client.connect("/client", headers=auth_header)
 
@@ -155,18 +142,16 @@ def socketio_client(app, session, db_manager, jwt_blacklist_manager, request):
 
 
 @pytest.fixture(scope='function')
-def socketio_printer(app, session, db_manager, jwt_blacklist_manager, request):
+def socketio_printer(app, session, db_manager, request):
     global _printer_session_key
 
     socketio_client = socketio.test_client(app)
 
-    access_token = create_access_token({
+    auth_header = {"X-Identity": json.dumps({
         "type": "printer",
         "id": 1,
         "serial_number": "020.238778.0823"
-    })
-    jwt_blacklist_manager.add_access_token(decode_token(access_token))
-    auth_header = {"Authorization": "Bearer " + access_token}
+    })}
 
     socketio_client.connect("/printer", headers=auth_header)
 
