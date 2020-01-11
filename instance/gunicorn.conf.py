@@ -1,5 +1,4 @@
 # coding=utf-8
-import os
 
 # Set the logger configuration
 loglevel = 'access'
