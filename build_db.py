@@ -36,4 +36,4 @@ if __name__ == '__main__':
 
     from queuemanager.database import init_app, init_db
     init_app(app)
-    init_db()
+    init_db(app)

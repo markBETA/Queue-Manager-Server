@@ -1,13 +1,4 @@
 # coding=utf-8
-import os
-
-# Read the root folder
-_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-_RUN = os.path.join(_ROOT, 'run/')
-
-# Create the 'run' if don't exist
-if not os.path.exists(_RUN):
-    os.mkdir(_RUN)
 
 # Set the logger configuration
 loglevel = 'access'
