@@ -32,7 +32,7 @@ def create_app(name=__name__, testing=False, init_db_manager_values=False, enabl
         }
 
     if "socketio" in enabled_modules and "socketio-ext" in enabled_modules:
-        raise ValueError("The 'socketio' and the 'socketio-ext' can't be enabled at the same time.")
+        raise ValueError("The 'socketio' and the 'socketio-ext' modules can't be enabled at the same time.")
 
     from flask import Flask
     app = Flask(name, instance_relative_config=True)
