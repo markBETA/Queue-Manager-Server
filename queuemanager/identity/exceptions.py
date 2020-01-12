@@ -43,23 +43,6 @@ class AuthenticationSubrequestError(IdentityManagerError):
     """
     This exception will be raised when the authentication subrequest fails.
     """
-    def __init__(self, *args, response=None):
-        """Initialize `AuthenticationSubrequestError` with `response` objects."""
-        self.response = response
-        super(AuthenticationSubrequestError, self).__init__(*args)
-
-
-class SubrequestConnectionError(AuthenticationSubrequestError):
-    """
-    This exception will be raised when the authentication subrequest reports a connection error.
-    """
-    pass
-
-
-class SubrequestTimeoutError(AuthenticationSubrequestError):
-    """
-    This exception will be raised when the authentication subrequest reports a timeout error.
-    """
     pass
 
 
@@ -74,4 +57,9 @@ class AuthenticationFailed(AuthenticationSubrequestError):
     """
     This exception will be raised when the authentication fails from the subrequest.
     """
-    pass
+
+    def __init__(self, *args, content, code):
+        """Initialize `AuthenticationFailed` with `content` and `code` objects."""
+        self.content = content.decode('utf-8')
+        self.code = code
+        super(AuthenticationSubrequestError, self).__init__(*args)

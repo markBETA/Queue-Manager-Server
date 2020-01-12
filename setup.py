@@ -27,7 +27,6 @@ setup(
         'eventlet',
         'psycopg2',
         'redis',
-        'parse',
-        'urllib3'
+        'parse'
     ]
 )

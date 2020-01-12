@@ -38,11 +38,11 @@ def set_exception_handlers(app, from_api=False):
 
     @app.errorhandler(AuthenticationFailed)
     def api_error_handler(e):
-        return jsonify(json.loads(e.response.data.decode('utf-8'))), e.response.status
+        return jsonify(json.loads(e.content)), e.code
 
     @app.errorhandler(AuthenticationSubrequestError)
     def api_error_handler(_e):
-        return jsonify({'message': str("Unable to authenticate the request.")}), 500
+        return jsonify({'message': "Unable to authenticate the request"}), 500
 
     @app.errorhandler(InvalidParameter)
     def db_manager_error_handler(e):
@@ -50,7 +50,7 @@ def set_exception_handlers(app, from_api=False):
 
     @app.errorhandler(DBManagerError)
     def db_manager_error_handler(_e):
-        return jsonify({'message': 'Unable to read/write data at the database.'}), 500
+        return jsonify({'message': 'Unable to read/write data at the database'}), 500
 
     @app.errorhandler(FileManagerError)
     def file_manager_error(e):

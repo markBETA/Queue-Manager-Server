@@ -12,7 +12,8 @@ __status__ = "Development"
 
 import json
 import warnings
-import urllib3
+import urllib.request
+import urllib.error
 
 from functools import wraps
 from json import JSONDecodeError
@@ -21,7 +22,7 @@ from flask import request
 from flask import _request_ctx_stack as ctx_stack
 
 from .exceptions import (
-    MissingIdentityHeader, IdentityValidationError, SubrequestConnectionError, SubrequestTimeoutError,
+    MissingIdentityHeader, IdentityValidationError,
     SubrequestError, AuthenticationFailed
 )
 from .schemas import UserIdentityHeader, PrinterIdentityHeader
@@ -56,15 +57,13 @@ class IdentityManager(object):
         self.config["identity_header"] = app.config.get("IDENTITY_HEADER", "X-Identity")
         self.get_identity_from_header = self.app.config["ENV"] == "production" or self.app.config["TESTING"]
         try:
-            self.http = urllib3.PoolManager()
             self.config["subrequest_url"] = app.config["AUTHORIZATION_SUBREQUEST_URL"]
-            self.config["subrequest_endpoint"] = app.config["AUTHORIZATION_SUBREQUEST_ENDPOINT"]
             self.config["subrequest_method"] = app.config["AUTHORIZATION_SUBREQUEST_METHOD"]
         except KeyError as e:
             raise Exception("Missing '{}' identity manager configuration parameter".format(e.args[0]))
 
-    def get_identity_header_json(self, http_request=request):
-        identity_header_value = http_request.headers.get(self.config["identity_header"], None)
+    def get_identity_header_json(self, http_request_headers):
+        identity_header_value = http_request_headers.get(self.config["identity_header"], None)
 
         # Check if the identity header is present
         if identity_header_value is None:
@@ -97,28 +96,30 @@ class IdentityManager(object):
 
     def validate_identity_in_request(self):
         # Retrieve the identity header contents
-        identity_data = self.get_identity_header_json()
+        identity_data = self.get_identity_header_json(request.headers)
         self.set_current_identity(identity_data)
 
     def authentication_subrequest(self):
         # Make a subrequest to an external API to retrieve the identity
+        req = urllib.request.Request(
+            self.config["subrequest_url"], headers={k: v for k, v in request.headers.items()},
+            method=self.config["subrequest_method"]
+        )
         try:
-            subrequest_response = self.http.request(
-                self.config["subrequest_method"], self.config["subrequest_url"] + self.config["subrequest_endpoint"],
-                headers=request.headers
-            )
-        except urllib3.exceptions.ConnectionError as e:
-            raise SubrequestConnectionError(str(e), response=e.response)
-        except urllib3.exceptions.HTTPError as e:
-            raise SubrequestError(str(e))
+            subrequest_response = urllib.request.urlopen(req)
+            subrequest_headers = subrequest_response.headers
+            subrequest_response.close()
+        except urllib.error.HTTPError as subrequest_response:
+            subrequest_content = subrequest_response.read()
+            subrequest_code = subrequest_response.code
+            subrequest_response.close()
+            raise AuthenticationFailed(subrequest_response.reason, content=subrequest_content, code=subrequest_code)
+        except urllib.error.URLError as e:
+            raise SubrequestError(e.reason)
 
-        # If the authentication was successful (status code 200)
-        if subrequest_response.status == 200:
-            # Retrieve the identity header contents
-            identity_data = self.get_identity_header_json(subrequest_response)
-            self.set_current_identity(identity_data)
-        else:
-            raise AuthenticationFailed(response=subrequest_response)
+        # If the authentication was successful
+        identity_data = self.get_identity_header_json(subrequest_headers)
+        self.set_current_identity(identity_data)
 
     @staticmethod
     def get_identity():
@@ -137,14 +138,12 @@ class IdentityManager(object):
             if self.get_identity_from_header and not force_auth_subrequest:
                 @wraps(fn)
                 def wrapper(*args, **kwargs):
-                    self.current_identity = None
                     self.validate_identity_in_request()
                     return fn(*args, **kwargs)
                 return wrapper
             else:
                 @wraps(fn)
                 def wrapper(*args, **kwargs):
-                    self.current_identity = None
                     self.authentication_subrequest()
                     return fn(*args, **kwargs)
                 return wrapper
