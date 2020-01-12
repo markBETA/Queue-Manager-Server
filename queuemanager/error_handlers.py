@@ -16,7 +16,8 @@ from flask import jsonify
 from werkzeug.exceptions import HTTPException
 
 from .identity import (
-    MissingIdentityHeader, IdentityValidationError, AuthenticationFailed, AuthenticationSubrequestError
+    MissingIdentityHeader, MissingAuthorizationHeader, IdentityValidationError,
+    AuthenticationFailed, AuthenticationSubrequestError
 )
 from .database import InvalidParameter, DBManagerError
 from .file_storage.exceptions import FileManagerError
@@ -39,6 +40,10 @@ def set_exception_handlers(app, from_api=False):
     @app.errorhandler(AuthenticationFailed)
     def api_error_handler(e):
         return jsonify(json.loads(e.content)), e.code
+
+    @app.errorhandler(MissingAuthorizationHeader)
+    def api_error_handler(_e):
+        return jsonify({'message': str("Missing Authorization Header")}), 401
 
     @app.errorhandler(AuthenticationSubrequestError)
     def api_error_handler(_e):

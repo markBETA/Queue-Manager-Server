@@ -12,7 +12,7 @@ __status__ = "Development"
 
 import json
 import warnings
-import urllib.request
+import urllib.request as http
 import urllib.error
 
 from functools import wraps
@@ -22,7 +22,7 @@ from flask import request
 from flask import _request_ctx_stack as ctx_stack
 
 from .exceptions import (
-    MissingIdentityHeader, IdentityValidationError,
+    MissingIdentityHeader, MissingAuthorizationHeader, IdentityValidationError,
     SubrequestError, AuthenticationFailed
 )
 from .schemas import UserIdentityHeader, PrinterIdentityHeader
@@ -54,7 +54,16 @@ class IdentityManager(object):
                 'Defaulting IDENTITY_HEADER to "X-Identity".'
             )
 
+        if (
+            'AUTHORIZATION_HEADER' not in app.config
+        ):
+            warnings.warn(
+                'AUTHORIZATION_HEADER not set. '
+                'Defaulting AUTHORIZATION_HEADER to "Authorization".'
+            )
+
         self.config["identity_header"] = app.config.get("IDENTITY_HEADER", "X-Identity")
+        self.config["authorization_header"] = app.config.get("IDENTITY_HEADER", "Authorization")
         self.get_identity_from_header = self.app.config["ENV"] == "production" or self.app.config["TESTING"]
         try:
             self.config["subrequest_url"] = app.config["AUTHORIZATION_SUBREQUEST_URL"]
@@ -100,13 +109,17 @@ class IdentityManager(object):
         self.set_current_identity(identity_data)
 
     def authentication_subrequest(self):
+        if self.config["authorization_header"] not in request.headers:
+            raise MissingAuthorizationHeader()
+
         # Make a subrequest to an external API to retrieve the identity
-        req = urllib.request.Request(
-            self.config["subrequest_url"], headers={k: v for k, v in request.headers.items()},
+        req = http.Request(
+            self.config["subrequest_url"],
+            headers={self.config["authorization_header"]: request.headers[self.config["authorization_header"]]},
             method=self.config["subrequest_method"]
         )
         try:
-            subrequest_response = urllib.request.urlopen(req)
+            subrequest_response = http.urlopen(req)
             subrequest_headers = subrequest_response.headers
             subrequest_response.close()
         except urllib.error.HTTPError as subrequest_response:

@@ -12,8 +12,8 @@ __status__ = "Development"
 
 from .exceptions import (
     IdentityManagerError, IdentityValidationError, MissingIdentityHeader, IdentityValidationError,
-    MissingIdentityHeader, InvalidIdentityHeader, AuthenticationSubrequestError,
-    SubrequestError, AuthenticationFailed
+    MissingIdentityHeader, MissingAuthorizationHeader, InvalidIdentityHeader,
+    AuthenticationSubrequestError, SubrequestError, AuthenticationFailed
 )
 from .definitions import identity_mgr
 

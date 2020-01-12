@@ -46,6 +46,12 @@ class AuthenticationSubrequestError(IdentityManagerError):
     pass
 
 
+class MissingAuthorizationHeader(AuthenticationSubrequestError):
+    """
+    This exception will be raised when the identity header is not present.
+    """
+    pass
+
 class SubrequestError(AuthenticationSubrequestError):
     """
     This exception will be raised when the authentication subrequest reports a HTTP error.

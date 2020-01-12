@@ -24,6 +24,7 @@ class Config(object):
     SOCKETIO_MESSAGE_QUEUE = "redis://redis.dev.server:6379/1"
 
     IDENTITY_HEADER = "X-Identity"
+    AUTHORIZATION_HEADER = "Authorization"
     AUTHORIZATION_SUBREQUEST_URL = "http://localhost:5001/api/general/check_access_token"
     AUTHORIZATION_SUBREQUEST_METHOD = "POST"
 
