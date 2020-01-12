@@ -131,9 +131,9 @@ class IdentityManager(object):
         else:
             return current_identity
 
-    def identity_required(self):
+    def identity_required(self, force_auth_subrequest=False):
         def decorator(fn):
-            if self.get_identity_from_header:
+            if self.get_identity_from_header and not force_auth_subrequest:
                 @wraps(fn)
                 def wrapper(*args, **kwargs):
                     self.current_identity = None

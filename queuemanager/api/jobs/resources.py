@@ -115,7 +115,7 @@ class JobCreate(Resource):
     @api.response(422, "Invalid identity")
     @api.response(500, "Unable to save the file")
     @api.response(500, "Unable to write the new job to the database")
-    @identity_mgr.identity_required()
+    @identity_mgr.identity_required(force_auth_subrequest=current_app.config.get("ENV") == "production")
     def post(self):
         """
         Create a new job using the GCODE located at the request body or the server filesystem
