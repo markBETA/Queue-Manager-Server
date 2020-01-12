@@ -56,7 +56,8 @@ class IdentityManager(object):
         self.config["identity_header"] = app.config.get("IDENTITY_HEADER", "X-Identity")
         self.get_identity_from_header = self.app.config["ENV"] == "production" or self.app.config["TESTING"]
         try:
-            self.http = urllib3.connection_from_url(app.config["AUTHORIZATION_SUBREQUEST_URL"])
+            self.http = urllib3.PoolManager()
+            self.config["subrequest_url"] = app.config["AUTHORIZATION_SUBREQUEST_URL"]
             self.config["subrequest_endpoint"] = app.config["AUTHORIZATION_SUBREQUEST_ENDPOINT"]
             self.config["subrequest_method"] = app.config["AUTHORIZATION_SUBREQUEST_METHOD"]
         except KeyError as e:
@@ -103,7 +104,8 @@ class IdentityManager(object):
         # Make a subrequest to an external API to retrieve the identity
         try:
             subrequest_response = self.http.request(
-                self.config["subrequest_method"], self.config["subrequest_endpoint"], headers=request.headers
+                self.config["subrequest_method"], self.config["subrequest_url"] + self.config["subrequest_endpoint"],
+                headers=request.headers
             )
         except urllib3.exceptions.ConnectionError as e:
             raise SubrequestConnectionError(str(e), response=e.response)
@@ -116,7 +118,6 @@ class IdentityManager(object):
             identity_data = self.get_identity_header_json(subrequest_response)
             self.set_current_identity(identity_data)
         else:
-            print("Subrequest response status:", subrequest_response.status)
             raise AuthenticationFailed(response=subrequest_response)
 
     @staticmethod

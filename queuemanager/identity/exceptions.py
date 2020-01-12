@@ -51,27 +51,27 @@ class AuthenticationSubrequestError(IdentityManagerError):
 
 class SubrequestConnectionError(AuthenticationSubrequestError):
     """
-    This exception will be raised when the identity header is not present.
+    This exception will be raised when the authentication subrequest reports a connection error.
     """
     pass
 
 
 class SubrequestTimeoutError(AuthenticationSubrequestError):
     """
-    This exception will be raised when the identity header is not present.
+    This exception will be raised when the authentication subrequest reports a timeout error.
     """
     pass
 
 
 class SubrequestError(AuthenticationSubrequestError):
     """
-    This exception will be raised when the identity header is not present.
+    This exception will be raised when the authentication subrequest reports a HTTP error.
     """
     pass
 
 
 class AuthenticationFailed(AuthenticationSubrequestError):
     """
-    This exception will be raised when the identity header is not present.
+    This exception will be raised when the authentication fails from the subrequest.
     """
     pass

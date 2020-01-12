@@ -10,7 +10,11 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
-from .exceptions import IdentityManagerError, MissingIdentityHeader, IdentityValidationError
+from .exceptions import (
+    IdentityManagerError, IdentityValidationError, MissingIdentityHeader, IdentityValidationError,
+    MissingIdentityHeader, InvalidIdentityHeader, AuthenticationSubrequestError,
+    SubrequestConnectionError, SubrequestTimeoutError, SubrequestError, AuthenticationFailed
+)
 from .definitions import identity_mgr
 
 

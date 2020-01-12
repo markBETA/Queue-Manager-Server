@@ -28,6 +28,6 @@ setup(
         'psycopg2',
         'redis',
         'parse',
-        "urllib3"
+        'urllib3'
     ]
 )

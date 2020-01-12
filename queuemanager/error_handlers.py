@@ -10,10 +10,14 @@ __maintainer__ = "Marc Bermejo"
 __email__ = "mbermejo@bcn3dtechnologies.com"
 __status__ = "Development"
 
+import json
+
 from flask import jsonify
 from werkzeug.exceptions import HTTPException
 
-from .identity import MissingIdentityHeader, IdentityValidationError
+from .identity import (
+    MissingIdentityHeader, IdentityValidationError, AuthenticationFailed, AuthenticationSubrequestError
+)
 from .database import InvalidParameter, DBManagerError
 from .file_storage.exceptions import FileManagerError
 
@@ -32,6 +36,14 @@ def set_exception_handlers(app, from_api=False):
     def api_error_handler(e):
         return jsonify({'message': str(e)}), 422
 
+    @app.errorhandler(AuthenticationFailed)
+    def api_error_handler(e):
+        return jsonify(json.loads(e.response.data.decode('utf-8'))), e.response.status
+
+    @app.errorhandler(AuthenticationSubrequestError)
+    def api_error_handler(_e):
+        return jsonify({'message': str("Unable to authenticate the request.")}), 500
+
     @app.errorhandler(InvalidParameter)
     def db_manager_error_handler(e):
         return jsonify({'message': str(e)}), 400
@@ -43,5 +55,3 @@ def set_exception_handlers(app, from_api=False):
     @app.errorhandler(FileManagerError)
     def file_manager_error(e):
         return jsonify({'message': str(e)}), 500
-
-    # TODO: Identity error handlers
