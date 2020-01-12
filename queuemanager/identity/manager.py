@@ -63,7 +63,7 @@ class IdentityManager(object):
             )
 
         self.config["identity_header"] = app.config.get("IDENTITY_HEADER", "X-Identity")
-        self.config["authorization_header"] = app.config.get("IDENTITY_HEADER", "Authorization")
+        self.config["authorization_header"] = app.config.get("AUTHORIZATION_HEADER", "Authorization")
         self.get_identity_from_header = self.app.config["ENV"] == "production" or self.app.config["TESTING"]
         try:
             self.config["subrequest_url"] = app.config["AUTHORIZATION_SUBREQUEST_URL"]
