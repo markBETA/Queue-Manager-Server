@@ -4,7 +4,7 @@ The printer, if is connected and the hot ends and materials configuration meets 
 
 ## How to clone this repository
 This repository has submodules. That means that you need to fetch the submodules too.
-  - git clone https://github.com/BCN3D/Queue-Manager-Server.git
+  - git clone https://github.com/markBETA/Queue-Manager-Server.git
   - git submodule update --init --recursive
 
 
